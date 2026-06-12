@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>除草チェックリスト 自動生成ツール v6</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Hiragino Sans','Meiryo',sans-serif;font-size:13px;background:#f0f0ea;color:#222}
+.app{display:flex;height:100vh}
+.panel-edit{width:450px;min-width:450px;background:#fff;border-right:1px solid #ddd;display:flex;flex-direction:column;overflow:hidden}
+.panel-preview{flex:1;overflow-y:auto;background:#ddd;padding:20px}
+
+/* header */
+.edit-header{padding:9px 14px;background:#1a5c3a;color:#fff;flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.edit-header h1{font-size:13px;font-weight:700;flex:1}
+.undo-btns{display:flex;gap:3px}
+.undo-btn{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:3px;padding:3px 8px;font-size:11px;cursor:pointer}
+.undo-btn:hover{background:rgba(255,255,255,.28)}
+.undo-btn:disabled{opacity:.35;cursor:default}
+.star-btns{display:flex;gap:3px;align-items:center}
+.star-btn{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:3px;padding:2px 7px;font-size:10px;cursor:pointer;white-space:nowrap}
+.star-btn:hover{background:rgba(255,255,255,.28)}
+.ls-btns{display:flex;gap:2px;align-items:center}
+.ls-btn{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:3px;padding:2px 6px;font-size:10px;cursor:pointer;white-space:nowrap}
+.ls-btn:hover{background:rgba(255,255,255,.28)}
+.ls-btn.active-ls{background:rgba(255,255,255,.4);outline:1px solid rgba(255,255,255,.6)}
+
+/* tabs */
+.tab-bar{display:flex;border-bottom:2px solid #1a5c3a;flex-shrink:0}
+.tab-btn{flex:1;padding:7px 4px;background:#f5f5f0;border:none;border-right:1px solid #ddd;font-size:12px;font-weight:600;cursor:pointer;color:#666}
+.tab-btn:last-child{border-right:none}
+.tab-btn.active{background:#fff;color:#1a5c3a}
+.tab-pane{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.tab-pane.active{display:flex;flex-direction:column}
+
+/* ai area */
+.ai-area{padding:9px 13px;border-bottom:1px solid #eee;flex-shrink:0}
+.ai-area textarea{width:100%;height:66px;border:1px solid #ccc;border-radius:4px;font-size:11px;padding:5px 7px;resize:vertical;font-family:inherit}
+.ai-row{display:flex;gap:6px;margin-top:5px;align-items:center}
+.ai-row .hint{font-size:10px;color:#888;flex:1}
+.status-bar{font-size:11px;padding:3px 13px;flex-shrink:0}
+.st-ok{background:#f0f7f4;color:#1a5c3a}.st-err{background:#fff5f5;color:#c00}
+
+/* edit body */
+.edit-body{flex:1;overflow-y:auto;padding:9px 13px}
+
+/* form */
+.fi{border:1px solid #ccc;border-radius:4px;padding:3px 7px;font-size:12px;width:100%}
+.fi:focus{outline:none;border-color:#1a5c3a}
+select.fi{background:#fff;padding:3px 5px}
+.field-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.field-row label{font-size:11px;color:#666;white-space:nowrap;min-width:70px}
+
+/* rich-inp (contenteditable) */
+.rich-inp{display:block;min-height:24px;line-height:1.5;white-space:pre-wrap;word-break:break-word;cursor:text;background:#fff}
+.rich-inp:empty:before{content:attr(data-placeholder);color:#bbb;pointer-events:none;font-style:italic}
+.rich-inp:focus{outline:none;border-color:#1a5c3a}
+.item-lbl-inp.rich-inp{flex:1}
+
+/* notes */
+.notes-box{background:#fffdf0;border:1px solid #e8e4c0;border-radius:4px;padding:7px 10px;margin-bottom:8px}
+.notes-head{font-size:11px;font-weight:700;color:#6b6020;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.notes-list{}
+.note-item{display:flex;align-items:center;gap:4px;margin-bottom:3px}
+.note-item.drag-over-above{border-top:2px solid #1a5c3a}
+.note-item.drag-over-below{border-bottom:2px solid #1a5c3a}
+.note-item .rich-inp{flex:1;border:1px solid #ddd;border-radius:3px;padding:2px 5px;font-size:11px;min-height:22px;white-space:nowrap;overflow:hidden}
+.note-item .rich-inp:focus{border-color:#b8a020}
+
+/* header editor */
+.hdr-editor{background:#e8f4fb;border:1px solid #b8d4e8;border-radius:4px;padding:7px 10px;margin-bottom:8px}
+.hdr-editor-head{font-size:11px;font-weight:700;color:#1a4a6b;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.hdr-row-box{border:1px solid #c8d8e8;border-radius:3px;margin-bottom:4px;padding:5px 7px;background:#f5faff;cursor:default}
+.hdr-row-box.drag-over-above{border-top:2px solid #1a5c3a}
+.hdr-row-box.drag-over-below{border-bottom:2px solid #1a5c3a}
+.hdr-row-title{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+.hdr-fields-wrap{display:flex;flex-wrap:wrap;gap:4px}
+.hdr-field-item{display:flex;align-items:center;gap:4px;background:#fff;border:1px solid #ddd;border-radius:3px;padding:3px 6px;cursor:grab}
+.hdr-field-item:active{cursor:grabbing}
+.hdr-field-item.drag-over-left{border-left:3px solid #1a5c3a}
+.hdr-field-item.drag-over-right{border-right:3px solid #1a5c3a}
+
+/* section box */
+.sec-box{border:1px solid #e0e0d8;border-radius:5px;margin-bottom:7px;overflow:hidden}
+.sec-box.drag-over-above{border-top:2px solid #1a5c3a}
+.sec-box.drag-over-below{border-bottom:2px solid #1a5c3a}
+.sec-head{background:#f4f4ef;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none}
+.sec-head:hover{background:#eaeae4}
+.sec-head.timing-before{background:#d8eaf5 !important}
+.sec-head.timing-after{background:#d8f5e0 !important}
+.dh{color:#bbb;font-size:15px;cursor:grab;padding:0 2px}
+.dh:active{cursor:grabbing}
+.sec-lbl{flex:1;font-size:12px;font-weight:600;color:#333}
+.type-tag{font-size:10px;padding:1px 6px;border-radius:10px;background:#1a5c3a;color:#fff}
+.btn-icon{background:none;border:none;cursor:pointer;color:#bbb;font-size:13px;padding:0 2px}
+.btn-icon:hover{color:#c00}
+.sec-body{padding:7px 10px;display:none}
+.sec-body.open{display:block}
+
+/* timing selector */
+.timing-row{display:flex;align-items:center;gap:4px;margin-bottom:6px;flex-wrap:wrap}
+.timing-lbl{font-size:10px;color:#888;white-space:nowrap}
+.timing-opt{font-size:10px;display:flex;align-items:center;gap:2px;padding:2px 6px;border-radius:10px;border:1px solid #ddd;cursor:pointer;white-space:nowrap}
+.timing-opt.before{background:#d8eaf5;border-color:#a0c4e0}
+.timing-opt.after{background:#d8f5e0;border-color:#a0d4b0}
+
+/* item wrap */
+.item-wrap{border:1px solid #e8e8e2;border-radius:3px;margin-bottom:4px;background:#fafaf8}
+.item-wrap.drag-over-above{border-top:2px solid #1a5c3a}
+.item-wrap.drag-over-below{border-bottom:2px solid #1a5c3a}
+.item-head{display:flex;align-items:center;gap:3px;padding:4px 6px}
+.item-head .num-tag{font-size:10px;font-weight:700;color:#888;min-width:20px;text-align:right}
+.item-lbl-inp{flex:1;border:1px solid #ddd;border-radius:3px;padding:2px 5px;font-size:12px}
+.item-lbl-inp:focus{outline:none;border-color:#1a5c3a}
+.item-opts{display:flex;flex-wrap:wrap;gap:5px;padding:2px 6px 4px 26px;align-items:center}
+.item-opts label{font-size:11px;display:flex;align-items:center;gap:2px}
+.item-opts input[type=checkbox]{width:12px;height:12px}
+.item-opts select{font-size:11px;border:1px solid #ddd;border-radius:3px;padding:1px 3px;background:#fff}
+.note-inp-wrap{padding:0 6px 4px}
+.note-inp{width:100%;border:1px solid #ddd;border-radius:3px;padding:2px 5px;font-size:11px;color:#666;white-space:nowrap;overflow:hidden}
+.note-inp:focus{border-color:#1a5c3a}
+
+/* buttons */
+.btn{padding:5px 13px;border-radius:4px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:.12s}
+.btn-g{background:#1a5c3a;color:#fff}.btn-g:hover{background:#145030}
+.btn-b{background:#2563eb;color:#fff}.btn-b:hover{background:#1d4ed8}
+.btn-w{background:#fff;color:#333;border:1px solid #ccc}.btn-w:hover{background:#f5f5f2}
+.btn-add{background:#f0f7f4;color:#1a5c3a;border:1px dashed #1a5c3a;font-size:11px;padding:3px 9px}
+.btn-sm{padding:3px 8px;font-size:11px}
+.btn-danger{background:#fee;color:#c00;border:1px solid #fcc}.btn-danger:hover{background:#fdd}
+.edit-footer{padding:9px 13px;border-top:1px solid #eee;display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+
+/* template tab */
+.tmpl-body{flex:1;overflow-y:auto;padding:10px 13px}
+.tmpl-sec{margin-bottom:12px}
+.tmpl-sec h3{font-size:11px;font-weight:700;color:#444;margin-bottom:5px;padding-bottom:2px;border-bottom:1px solid #eee}
+.tmpl-list{margin-top:6px;border:1px solid #e0e0d8;border-radius:4px;overflow:hidden}
+.tmpl-list-header{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr auto;background:#f0f0ea;padding:4px 8px;font-size:10px;font-weight:700;color:#555;gap:4px;border-bottom:1px solid #ddd}
+.tmpl-list-row{display:grid;grid-template-columns:1fr 1fr 1fr 1.4fr auto;padding:5px 8px;font-size:11px;gap:4px;align-items:center;border-bottom:1px solid #f0f0ea;cursor:pointer;transition:.1s}
+.tmpl-list-row:last-child{border-bottom:none}
+.tmpl-list-row:hover{background:#f5f5f0}
+.tmpl-list-row.selected{background:#f0f7f4}
+.tmpl-list-row .tl-cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tmpl-list-row .tl-name{font-weight:600;color:#1a5c3a}
+.tmpl-list-empty{padding:16px;text-align:center;font-size:11px;color:#aaa}
+.tmpl-list-actions{display:flex;gap:3px}
+.tmpl-row{display:flex;gap:4px;align-items:center;margin-bottom:3px}
+.tmpl-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.tmpl-preview{background:#f8f8f5;border:1px solid #ddd;border-radius:5px;padding:8px 10px;margin-top:8px;font-size:11px}
+.tmpl-preview h4{font-size:12px;font-weight:700;color:#1a5c3a;margin-bottom:5px}
+.tmpl-preview .tp-row{display:flex;align-items:center;gap:5px;margin-bottom:3px;color:#555}
+.tmpl-preview .tp-tag{background:#e8f0e0;color:#2a6a3a;padding:1px 5px;border-radius:3px;font-size:10px}
+
+/* ── PREVIEW SHEET ── */
+.preview-sheet{width:210mm;min-height:297mm;background:#fff;margin:0 auto;padding:9mm 11mm;box-shadow:0 2px 10px rgba(0,0,0,.2);font-family:'Hiragino Sans','Meiryo',sans-serif;font-size:9pt}
+.p-title{text-align:center;font-size:13pt;font-weight:700;border-bottom:2.5px solid #000;padding-bottom:3px;margin-bottom:4px}
+.p-subtitle{text-align:center;font-size:8.5pt;color:#444;margin-bottom:4px}
+.p-notes{font-size:7.5pt;margin-bottom:5px}
+.p-notes li{margin-left:10px;margin-bottom:1px;list-style:disc}
+.hdr-tbl{width:100%;border-collapse:collapse;margin-bottom:5px}
+.hdr-tbl td{border:1px solid #999;padding:2px 5px;font-size:8pt}
+.hdr-lbl{background:#efefec;font-weight:700;white-space:nowrap}
+.sec-bar{color:#fff;padding:2px 7px;font-size:8.5pt;font-weight:700;margin-top:4px}
+/* inspection */
+.p-grid{width:100%;border-collapse:collapse}
+.p-grid td{border:1px solid #999;padding:2px 5px;font-size:8pt;vertical-align:middle}
+.p-grid .p-nl{width:36%}
+.p-grid .p-nv{width:14%;text-align:center;color:#555;font-size:7.5pt}
+.r-star{color:#c00;font-weight:700}
+/* misc */
+.misc-tbl{width:100%;border-collapse:collapse;margin-bottom:3px}
+.misc-tbl td{border:1px solid #999;padding:2px 5px;font-size:8pt;vertical-align:middle}
+.misc-n{width:20px;text-align:center;background:#666;color:#fff;font-weight:700}
+/* photo */
+.photo-tbl{width:100%;border-collapse:collapse}
+.photo-tbl td,.photo-tbl th{border:1px solid #999;padding:2px 5px;font-size:8pt;vertical-align:middle}
+.photo-n{width:20px;text-align:center;background:#666;color:#fff;font-weight:700}
+.photo-chk{width:15px;text-align:center}
+.photo-note{font-size:7pt;color:#777}
+.photo-thead td{background:#f0f0ec;font-size:7pt;text-align:center;font-weight:700;padding:2px 4px}
+/* before/after */
+.bf-lbl-bar{font-weight:700;text-align:center;background:#e8e8e5;border:1px solid #999;padding:2px;font-size:8pt;margin-top:3px}
+.bf-wrap{display:flex;gap:3px;align-items:stretch;margin-bottom:2px}
+.bf-col{flex:1}
+.bf-col-hdr{font-weight:700;text-align:center;background:#f0f0ec;border:1px solid #999;padding:2px;font-size:8pt}
+.bf-col-body{border:1px solid #999;border-top:none}
+.bf-arrow{display:flex;align-items:center;justify-content:center;font-size:14pt;color:#555;width:18px;flex-shrink:0}
+.bf-row{display:flex;align-items:center;border-bottom:1px solid #eee;padding:2px 3px;font-size:8pt}
+.bf-row:last-child{border-bottom:none}
+.bf-rn{width:18px;text-align:center;font-weight:700;font-size:8pt;background:#666;color:#fff;padding:1px 2px;border-radius:2px;flex-shrink:0}
+.bf-chk{width:13px;text-align:center;color:#ccc}
+.bf-rl{flex:1;padding-left:3px}
+/* remarks */
+.rmk-tbl{width:100%;border-collapse:collapse;margin-top:3px}
+.rmk-tbl td{border:1px solid #999;padding:2px 5px;font-size:8pt;height:16px}
+.rmk-lbl{background:#f0f0ec;font-weight:700;width:44px}
+/* line-spacing */
+.preview-sheet.ls-tight .misc-tbl td,
+.preview-sheet.ls-tight .photo-tbl td,
+.preview-sheet.ls-tight .p-grid td,
+.preview-sheet.ls-tight .rmk-tbl td{padding-top:1px!important;padding-bottom:1px!important}
+.preview-sheet.ls-tight .sec-bar{margin-top:2px!important}
+.preview-sheet.ls-wide .misc-tbl td,
+.preview-sheet.ls-wide .photo-tbl td,
+.preview-sheet.ls-wide .p-grid td,
+.preview-sheet.ls-wide .rmk-tbl td{padding-top:4px!important;padding-bottom:4px!important}
+.preview-sheet.ls-wide .sec-bar{margin-top:6px!important}
+
+@media print{
+  .app{display:block;height:auto}
+  .panel-edit{display:none}
+  .panel-preview{background:#fff;padding:0;overflow:visible}
+  .preview-sheet{box-shadow:none;width:100%;min-height:0;margin:0;padding:8mm 10mm}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ LEFT ═══ -->
+<div class="panel-edit">
+  <div class="edit-header">
+    <h1>🌿 除草チェックリスト v6</h1>
+    <div class="undo-btns">
+      <button class="undo-btn" id="btn-undo" onclick="undo()" disabled title="元に戻す (Cmd+Z)">↩ 戻す</button>
+      <button class="undo-btn" id="btn-redo" onclick="redo()" disabled title="やり直し (Cmd+Shift+Z)">↪ やり直し</button>
+    </div>
+    <div class="ls-btns">
+      <span style="font-size:9px;opacity:.8">行間:</span>
+      <button class="ls-btn" data-ls="tight" onclick="setLS('tight')" title="行間を狭く">狭め</button>
+      <button class="ls-btn active-ls" data-ls="normal" onclick="setLS('normal')" title="標準の行間">標準</button>
+      <button class="ls-btn" data-ls="wide" onclick="setLS('wide')" title="行間を広く">広め</button>
+    </div>
+    <div class="star-btns">
+      <span style="font-size:9px;opacity:.8">★一括:</span>
+      <button class="star-btn" onclick="setAllRequired(true)">全部つける</button>
+      <button class="star-btn" onclick="setAllRequired(false)">全部はずす</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('edit')">✏️ 編集</button>
+    <button class="tab-btn" onclick="switchTab('tmpl')">📁 テンプレート</button>
+  </div>
+
+  <!-- EDIT TAB -->
+  <div class="tab-pane active" id="tab-edit">
+    <div class="ai-area">
+      <textarea id="ai-input" placeholder="項目リストを貼り付けて「AI解析」&#10;例）★使用除草器具写真（写真）&#10;目視確認パワコン（◯×△）&#10;★除草不可範囲（有無・コメント）&#10;敷地内全体写真 前後セット&#10;備考欄×3&#10;&#10;【書式ヒント】Ctrl+B=太字(**文字**) / Ctrl+U=下線(__文字__)"></textarea>
+      <div class="ai-row">
+        <span class="hint">自然な文章OK。AIが種別・番号を自動判断。</span>
+        <button class="btn btn-g btn-sm" onclick="callAI()">✨ AI解析</button>
+      </div>
+    </div>
+    <div id="status-bar" style="display:none" class="status-bar"></div>
+    <div class="edit-body" id="edit-body"></div>
+    <div class="edit-footer">
+      <button class="btn btn-w btn-sm" onclick="pushUndo();addSection()">＋ セクション</button>
+      <button class="btn btn-b btn-sm" onclick="window.print()">🖨 印刷</button>
+      <button class="btn btn-w btn-sm" onclick="saveJSON()">💾 保存</button>
+      <button class="btn btn-w btn-sm" onclick="loadJSON()">📂 読込</button>
+    </div>
+  </div>
+
+  <!-- TEMPLATE TAB -->
+  <div class="tab-pane" id="tab-tmpl">
+    <div class="tmpl-body">
+      <div class="tmpl-sec">
+        <h3>💾 テンプレートとして保存</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:5px">
+          <div>
+            <div style="font-size:10px;color:#888;margin-bottom:2px">🏢 元請け企業</div>
+            <div class="tmpl-row" style="margin-bottom:3px">
+              <input type="text" class="fi" id="t-client" placeholder="企業名" style="flex:1;font-size:11px">
+              <button class="btn btn-w btn-sm" onclick="addClient()" style="font-size:10px;padding:2px 7px">追加</button>
+            </div>
+            <select class="fi" id="sel-client" style="width:100%;font-size:11px" onchange="onSelChange()">
+              <option value="">── 選択 ──</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#888;margin-bottom:2px">📋 案件</div>
+            <div class="tmpl-row" style="margin-bottom:3px">
+              <input type="text" class="fi" id="t-project" placeholder="案件名" style="flex:1;font-size:11px">
+              <button class="btn btn-w btn-sm" onclick="addProject()" style="font-size:10px;padding:2px 7px">追加</button>
+            </div>
+            <select class="fi" id="sel-project" style="width:100%;font-size:11px" onchange="onSelChange()">
+              <option value="">── 選択 ──</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">
+          <div>
+            <div style="font-size:10px;color:#888;margin-bottom:2px">👷 下請け企業（任意）</div>
+            <div class="tmpl-row" style="margin-bottom:3px">
+              <input type="text" class="fi" id="t-sub" placeholder="企業名" style="flex:1;font-size:11px">
+              <button class="btn btn-w btn-sm" onclick="addSub()" style="font-size:10px;padding:2px 7px">追加</button>
+            </div>
+            <select class="fi" id="sel-sub" style="width:100%;font-size:11px" onchange="onSelChange()">
+              <option value="__default">（全社共通）</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;color:#888;margin-bottom:2px">🏷 テンプレート名</div>
+            <input type="text" class="fi" id="t-tmplname" placeholder="例：SE除草標準" style="font-size:11px">
+          </div>
+        </div>
+        <button class="btn btn-g btn-sm" style="width:100%" onclick="saveTemplate()">💾 現在の編集内容をこの場所に保存</button>
+      </div>
+      <div class="tmpl-sec">
+        <h3>📋 保存済みテンプレート一覧</h3>
+        <div id="tmpl-list-area"></div>
+      </div>
+      <div id="tmpl-preview-area"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RIGHT ═══ -->
+<div class="panel-preview">
+  <div class="preview-sheet" id="preview-sheet">
+    <div style="text-align:center;color:#bbb;margin-top:80px;font-size:12px">
+      ← AI解析または編集すると印刷プレビューが表示されます
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// STATE & UNDO
+// ══════════════════════════════════════
+let state = { title:"", subtitle:"", notes:[], headerRows:[], sections:[], lineSpacing:"normal" };
+let undoStack = [], redoStack = [];
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(state));
+  if(undoStack.length > 30) undoStack.shift();
+  redoStack = [];
+  updateUndoBtns();
+}
+function undo() {
+  if(!undoStack.length) return;
+  redoStack.push(JSON.stringify(state));
+  state = JSON.parse(undoStack.pop());
+  assignNums(); renderEdit(); renderPreview(); updateUndoBtns();
+}
+function redo() {
+  if(!redoStack.length) return;
+  undoStack.push(JSON.stringify(state));
+  state = JSON.parse(redoStack.pop());
+  assignNums(); renderEdit(); renderPreview(); updateUndoBtns();
+}
+function updateUndoBtns() {
+  document.getElementById("btn-undo").disabled = !undoStack.length;
+  document.getElementById("btn-redo").disabled = !redoStack.length;
+}
+
+// Cmd+Z / Cmd+Shift+Z — skip if inside rich-inp (let browser handle)
+document.addEventListener("keydown", e => {
+  if(e.target.closest && e.target.closest(".rich-inp")) return;
+  if((e.ctrlKey||e.metaKey) && e.key==="z" && !e.shiftKey){ e.preventDefault(); undo(); return; }
+  if((e.ctrlKey||e.metaKey) && (e.key==="y" || (e.key==="z" && e.shiftKey))){ e.preventDefault(); redo(); return; }
+}, true);
+
+// Push undo on text blur (for regular inputs)
+document.addEventListener("blur", e => {
+  if(e.target.matches(".fi,input[type=text]") && e.target.closest(".edit-body")) {
+    pushUndo();
+  }
+}, true);
+
+// ══════════════════════════════════════
+// RICH TEXT SYSTEM
+// ══════════════════════════════════════
+let richRegistry = {};
+
+function regRich(rid, val, updateFn, placeholder) {
+  richRegistry[rid] = { val: val||"", updateFn: updateFn };
+  const ph = placeholder || "";
+  return `<div class="rich-inp fi" contenteditable="true" spellcheck="false" data-rid="${esc(rid)}" data-placeholder="${esc(ph)}"></div>`;
+}
+
+function regRichInline(rid, val, updateFn, placeholder, extraCls) {
+  richRegistry[rid] = { val: val||"", updateFn: updateFn };
+  const ph = placeholder || "";
+  const cls = "rich-inp" + (extraCls ? " "+extraCls : "");
+  return `<div class="${cls}" contenteditable="true" spellcheck="false" data-rid="${esc(rid)}" data-placeholder="${esc(ph)}"></div>`;
+}
+
+function initRichInputs() {
+  document.querySelectorAll(".rich-inp[data-rid]").forEach(el => {
+    const rid = el.dataset.rid;
+    const reg = richRegistry[rid];
+    if(!reg) return;
+    el.innerHTML = markerToHtml(reg.val);
+    el._origVal = reg.val;
+
+    el.addEventListener("keydown", ev => {
+      if((ev.ctrlKey||ev.metaKey) && ev.key==="b"){ ev.preventDefault(); document.execCommand("bold"); syncRich(el, reg); }
+      if((ev.ctrlKey||ev.metaKey) && ev.key==="u"){ ev.preventDefault(); document.execCommand("underline"); syncRich(el, reg); }
+    });
+    el.addEventListener("input", () => { syncRich(el, reg); });
+    el.addEventListener("blur", () => {
+      const cur = htmlToMarker(el.innerHTML);
+      if(cur !== el._origVal) {
+        pushUndo();
+        el._origVal = cur;
+        reg.val = cur;
+        reg.updateFn(cur);
+        renderPreview();
+      }
+    });
+  });
+}
+
+function syncRich(el, reg) {
+  const cur = htmlToMarker(el.innerHTML);
+  reg.val = cur;
+  reg.updateFn(cur);
+  renderPreview();
+}
+
+function markerToHtml(s) {
+  return esc(s)
+    .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+    .replace(/__([^_\n]+)__/g, "<u>$1</u>");
+}
+
+function htmlToMarker(html) {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return nodeToMarker(tmp).replace(/\u00a0/g," ").trim();
+}
+function nodeToMarker(node) {
+  let r = "";
+  for(const c of node.childNodes) {
+    if(c.nodeType===3){ r += c.textContent; }
+    else if(c.nodeName==="B"||c.nodeName==="STRONG"){ r += "**"+nodeToMarker(c)+"**"; }
+    else if(c.nodeName==="U"){ r += "__"+nodeToMarker(c)+"__"; }
+    else if(c.nodeName==="BR"){ r += "\n"; }
+    else { r += nodeToMarker(c); }
+  }
+  return r;
+}
+
+// fmt: for preview rendering — convert markers to HTML
+function fmt(s) {
+  return esc(s)
+    .replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+    .replace(/__([^_\n]+)__/g, "<u>$1</u>");
+}
+
+// ══════════════════════════════════════
+// LINE SPACING
+// ══════════════════════════════════════
+function setLS(s) {
+  state.lineSpacing = s;
+  renderPreview();
+  document.querySelectorAll(".ls-btn").forEach(b => b.classList.toggle("active-ls", b.dataset.ls===s));
+}
+
+// ══════════════════════════════════════
+// BULK REQUIRED
+// ══════════════════════════════════════
+function setAllRequired(val) {
+  pushUndo();
+  state.sections.forEach(sec => {
+    (sec.items||[]).forEach(it => { if("required" in it) it.required = val; });
+  });
+  renderEdit(); renderPreview();
+}
+
+// ══════════════════════════════════════
+// TEMPLATE STORAGE (inherits v5 templates)
+// ══════════════════════════════════════
+function getTemplates(){ try{ return JSON.parse(localStorage.getItem("cl5_tmpl")||"{}") }catch(e){return{}} }
+function saveTemplates(t){ localStorage.setItem("cl5_tmpl", JSON.stringify(t)) }
+
+// ══════════════════════════════════════
+// TABS
+// ══════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll(".tab-btn").forEach((b,i)=>b.classList.toggle("active",["edit","tmpl"][i]===id));
+  document.querySelectorAll(".tab-pane").forEach((p,i)=>p.classList.toggle("active",["tab-edit","tab-tmpl"][i]==="tab-"+id));
+  if(id==="tmpl") renderTmplPanel();
+}
+
+// ══════════════════════════════════════
+// NUMBERING
+// ══════════════════════════════════════
+function assignNums() {
+  let n = 1;
+  for(const s of state.sections) {
+    if(s.type==="misc") {
+      for(const it of (s.items||[])) { it.num = (it.numbered!==false) ? n++ : null; }
+    } else if(s.type==="photo") {
+      for(const it of (s.items||[])) { it.num = (it.numbered!==false) ? n++ : null; }
+    } else if(s.type==="beforeafter") {
+      for(const p of (s.items||[])) {
+        if(p.numbered!==false){ p.bn = n++; p.an = n++; } else { p.bn = null; p.an = null; }
+      }
+    }
+  }
+}
+
+// ══════════════════════════════════════
+// AI CALL
+// ══════════════════════════════════════
+async function callAI() {
+  const txt = document.getElementById("ai-input").value.trim();
+  if(!txt) return;
+  setStatus("AIが解析中…", false);
+  const sys = `太陽光発電所の除草・点検チェックリストをJSON化してください。
+
+JSON形式:
+{"title":"タイトル","subtitle":"作業種別","sections":[{"id":"id","title":"■名前","type":"photo"|"beforeafter"|"inspection"|"misc"|"remarks","timing":"","items":[]}]}
+
+typeごとのitems:
+photo: [{label,required,note,hasComment}]
+beforeafter: [{beforeLabel,afterLabel,required,note}]
+inspection: [{label,required}]
+misc: [{label,required,inputType:"yesno"|"check",hasComment}]
+remarks: [{label}]
+
+rules: ★→required:true / 目視点検・安全装備→inspection / 単独写真→photo / 前後比較→beforeafter / 有無コメント→misc / 備考→remarks / timing必ず""
+JSONのみ出力。`;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:sys,messages:[{role:"user",content:"JSONに変換:\n\n"+txt}]})});
+    const d = await r.json();
+    const raw = d.content?.find(b=>b.type==="text")?.text||"";
+    const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
+    pushUndo();
+    state.title = parsed.title || state.title;
+    state.subtitle = parsed.subtitle || state.subtitle;
+    state.sections = (parsed.sections||[]).map((s,i)=>({...s, id:s.id||"s"+Date.now()+i, timing:s.timing||"", items:s.items||[]}));
+    assignNums(); renderEdit(); renderPreview();
+    setStatus("✅ AI解析完了！内容を確認してください。", false);
+  } catch(e) { setStatus("❌ エラー: "+e.message, true); }
+}
+
+function setStatus(msg, err) {
+  const el = document.getElementById("status-bar");
+  el.style.display = "block"; el.className = "status-bar "+(err?"st-err":"st-ok");
+  el.textContent = msg;
+}
+
+// ══════════════════════════════════════
+// OPEN SECTION PRESERVATION
+// ══════════════════════════════════════
+function getOpenSecs() {
+  const open = new Set();
+  document.querySelectorAll(".sec-body.open").forEach(el => open.add(el.id));
+  return open;
+}
+function restoreOpenSecs(open) {
+  open.forEach(id => { const el=document.getElementById(id); if(el) el.classList.add("open"); });
+}
+
+// ══════════════════════════════════════
+// EDIT RENDER
+// ══════════════════════════════════════
+function renderEdit() {
+  const openSecs = getOpenSecs();
+  richRegistry = {};
+  const body = document.getElementById("edit-body");
+  let h = `<div style="margin-bottom:7px">
+    <div class="field-row"><label>タイトル</label>${regRich("__title", state.title, v=>{state.title=v;renderPreview();}, "タイトルを入力")}</div>
+    <div class="field-row"><label>作業種別</label>${regRich("__subtitle", state.subtitle, v=>{state.subtitle=v;renderPreview();}, "作業種別を入力")}</div>
+  </div>`;
+
+  // ── Notes editor ──
+  h += `<div class="notes-box">
+    <div class="notes-head">📝 注釈
+      <button class="btn btn-add btn-sm" style="padding:1px 7px;font-size:10px" onclick="pushUndo();state.notes.push('新しい注釈');renderEdit();renderPreview()">＋</button>
+    </div>
+    <div class="notes-list">`;
+  (state.notes||[]).forEach((n,i)=>{
+    h += `<div class="note-item" draggable="true" data-ni="${i}">
+      <span class="dh" onclick="event.stopPropagation()" title="ドラッグして並び替え">⠿</span>
+      <span style="font-size:10px;color:#aaa;min-width:10px">●</span>
+      ${regRichInline("note_"+i, n, v=>{state.notes[i]=v;renderPreview();}, "注釈テキスト")}
+      <button class="btn-icon" title="複製" onclick="pushUndo();state.notes.splice(${i}+1,0,state.notes[${i}]);renderEdit();renderPreview()">⧉</button>
+      <button class="btn-icon" onclick="pushUndo();state.notes.splice(${i},1);renderEdit();renderPreview()">✕</button>
+    </div>`;
+  });
+  h += `</div></div>`;
+
+  // ── Header rows editor ──
+  h += `<div class="hdr-editor">
+    <div class="hdr-editor-head">📋 ヘッダー項目
+      <span style="font-size:10px;font-weight:400;color:#5a7a9a">（行全体・フィールドを個別にドラッグ移動可）</span>
+    </div>`;
+  (state.headerRows||[]).forEach((row, ri) => {
+    h += `<div class="hdr-row-box" draggable="true" data-ri="${ri}">
+      <div class="hdr-row-title">
+        <span class="dh" style="font-size:13px;margin-right:2px" title="行をドラッグ">⠿</span>
+        <span style="font-size:10px;font-weight:700;color:#1a4a6b">行 ${ri+1}</span>
+        <button class="btn-icon" title="この行を削除" onclick="pushUndo();state.headerRows.splice(${ri},1);renderEdit();renderPreview()">✕</button>
+        <button class="btn btn-add btn-sm" style="padding:1px 7px;font-size:10px" onclick="pushUndo();state.headerRows[${ri}].push({label:'新しい項目',req:false,val:'',pct:20});renderEdit();renderPreview()">＋ 項目</button>
+        <button class="btn btn-add btn-sm" style="padding:1px 7px;font-size:10px" onclick="pushUndo();state.headerRows.splice(${ri}+1,0,JSON.parse(JSON.stringify(state.headerRows[${ri}])));renderEdit();renderPreview()">⧉ 行複製</button>
+      </div>
+      <div class="hdr-fields-wrap">`;
+    row.forEach((f, fi) => {
+      h += `<div class="hdr-field-item" draggable="true" data-ri="${ri}" data-fi="${fi}" title="ドラッグして順番変更">
+        <span style="font-size:11px;color:#bbb;cursor:grab" onmousedown="event.stopPropagation()">⠿</span>
+        <input type="text" title="ラベル名" placeholder="ラベル" style="width:80px;border:1px solid #ccc;border-radius:3px;padding:2px 4px;font-size:11px"
+          value="${esc(f.label)}" oninput="state.headerRows[${ri}][${fi}].label=this.value;renderPreview()">
+        <label style="font-size:10px;white-space:nowrap"><input type="checkbox" ${f.req?"checked":""} onchange="state.headerRows[${ri}][${fi}].req=this.checked;renderPreview()"> ★</label>
+        <input type="text" title="初期値テキスト" placeholder="初期値" style="width:80px;border:1px solid #ccc;border-radius:3px;padding:2px 4px;font-size:11px"
+          value="${esc(f.val||"")}" oninput="state.headerRows[${ri}][${fi}].val=this.value;renderPreview()">
+        <label style="font-size:10px;white-space:nowrap" title="幅%">
+          <input type="number" min="5" max="80" step="5" style="width:38px;border:1px solid #ccc;border-radius:3px;padding:1px 3px;font-size:11px"
+            value="${f.pct||20}" oninput="state.headerRows[${ri}][${fi}].pct=parseInt(this.value)||20;renderPreview()">%
+        </label>
+        <button class="btn-icon" onclick="pushUndo();state.headerRows[${ri}].splice(${fi},1);renderEdit();renderPreview()">✕</button>
+        <button class="btn-icon" title="複製" onclick="pushUndo();state.headerRows[${ri}].splice(${fi}+1,0,JSON.parse(JSON.stringify(state.headerRows[${ri}][${fi}])));renderEdit();renderPreview()">⧉</button>
+      </div>`;
+    });
+    h += `</div></div>`;
+  });
+  h += `<button class="btn btn-add" style="width:100%;margin-top:3px;font-size:10px" onclick="pushUndo();state.headerRows.push([{label:'新しい項目',req:false,val:'',pct:40}]);renderEdit();renderPreview()">＋ 行を追加</button>`;
+  h += `</div>`;
+
+  // ── Sections ──
+  h += `<div id="sections-wrap">`;
+  state.sections.forEach((sec,si)=>{ h += renderSecBox(sec,si); });
+  h += `</div>`;
+  h += `<button class="btn btn-add" style="width:100%;margin-top:4px" onclick="pushUndo();addSection()">＋ セクション追加</button>`;
+
+  body.innerHTML = h;
+  restoreOpenSecs(openSecs);
+  initRichInputs();
+  initDrag();
+  initHdrDrag();
+  initHdrFieldDrag();
+  initNoteDrag();
+}
+
+function renderSecBox(sec, si) {
+  const TN = {photo:"写真(番号)",beforeafter:"前後セット",inspection:"◯×",misc:"有無/CHK",remarks:"備考欄",spacer:"空白"};
+  let items_h = "";
+  const typeOpts = ["photo","beforeafter","inspection","misc","remarks","spacer"].map(t=>
+    `<option value="${t}" ${sec.type===t?"selected":""}>${{photo:"写真",beforeafter:"前後",inspection:"◯×",misc:"有無",remarks:"備考",spacer:"空白"}[t]}</option>`
+  ).join("");
+
+  const timing = sec.timing||"";
+  const headCls = timing==="before" ? " timing-before" : timing==="after" ? " timing-after" : "";
+
+  const meta = `
+  <div class="field-row" style="margin-bottom:4px">
+    <label>セクション名</label>
+    ${regRich("sec"+si+"_title", sec.title, v=>{state.sections[si].title=v;renderPreview();}, "セクション名")}
+    <select class="fi" style="width:70px;flex-shrink:0" onchange="pushUndo();state.sections[${si}].type=this.value;state.sections[${si}].items=[];assignNums();renderEdit();renderPreview()">${typeOpts}</select>
+  </div>
+  <div class="field-row" style="margin-bottom:4px">
+    <label style="font-size:11px;color:#666">セクション注釈</label>
+    ${regRich("sec"+si+"_note", sec.note||"", v=>{state.sections[si].note=v;renderPreview();}, "※セクション全体への注釈（省略可）")}
+  </div>
+  <div class="timing-row">
+    <span class="timing-lbl">色分け:</span>
+    <label class="timing-opt"><input type="radio" name="tm${si}" value="" ${timing===''?'checked':''} onchange="state.sections[${si}].timing='';renderEdit();renderPreview()"> なし</label>
+    <label class="timing-opt before"><input type="radio" name="tm${si}" value="before" ${timing==='before'?'checked':''} onchange="state.sections[${si}].timing='before';renderEdit();renderPreview()"> 🔵 作業前</label>
+    <label class="timing-opt after"><input type="radio" name="tm${si}" value="after" ${timing==='after'?'checked':''} onchange="state.sections[${si}].timing='after';renderEdit();renderPreview()"> 🟢 作業後</label>
+  </div>`;
+
+  if(sec.type==="photo") {
+    (sec.items||[]).forEach((it,ii)=>{
+      items_h += `<div class="item-wrap" data-si="${si}" data-ii="${ii}" draggable="true">
+        <div class="item-head">
+          <span class="dh" title="ドラッグして並び替え">⠿</span>
+          <span class="num-tag">${it.num!=null?it.num:"―"}</span>
+          ${regRichInline("s"+si+"_i"+ii+"_lbl", it.label, v=>{state.sections[si].items[ii].label=v;renderPreview();}, "写真項目名", "item-lbl-inp")}
+          <button class="btn-icon" title="複製" onclick="pushUndo();dupItem(${si},${ii})">⧉</button>
+          <button class="btn-icon" onclick="pushUndo();state.sections[${si}].items.splice(${ii},1);assignNums();renderEdit();renderPreview()">✕</button>
+        </div>
+        <div class="item-opts">
+          <label><input type="checkbox" ${it.required?"checked":""} onchange="state.sections[${si}].items[${ii}].required=this.checked;renderPreview()"> ★必須</label>
+          <label><input type="checkbox" ${it.numbered!==false?"checked":""} onchange="state.sections[${si}].items[${ii}].numbered=this.checked;assignNums();renderEdit();renderPreview()"> 通し番号</label>
+          <label><input type="checkbox" ${it.hasComment?"checked":""} onchange="state.sections[${si}].items[${ii}].hasComment=this.checked;renderPreview()"> コメント欄</label>
+        </div>
+        <div class="note-inp-wrap">${regRichInline("s"+si+"_i"+ii+"_note", it.note||"", v=>{state.sections[si].items[ii].note=v;renderPreview();}, "※項目注釈テキスト", "note-inp")}</div>
+      </div>`;
+    });
+    items_h += `<button class="btn btn-add" style="width:100%;margin-top:2px" onclick="pushUndo();addItem(${si})">＋ 写真項目追加</button>`;
+
+  } else if(sec.type==="beforeafter") {
+    (sec.items||[]).forEach((p,ii)=>{
+      items_h += `<div class="item-wrap" data-si="${si}" data-ii="${ii}" draggable="true">
+        <div class="item-head">
+          <span class="dh">⠿</span>
+          <span class="num-tag" style="font-size:9px;color:#1a6c30">${p.bn!=null?p.bn:"―"}→${p.an!=null?p.an:"―"}</span>
+          ${regRichInline("s"+si+"_i"+ii+"_bl", p.beforeLabel||"", v=>{state.sections[si].items[ii].beforeLabel=v;renderPreview();}, "前", "item-lbl-inp")}
+          <span style="font-size:10px;color:#aaa;padding:0 2px">→</span>
+          ${regRichInline("s"+si+"_i"+ii+"_al", p.afterLabel||"", v=>{state.sections[si].items[ii].afterLabel=v;renderPreview();}, "後", "item-lbl-inp")}
+          <button class="btn-icon" title="複製" onclick="pushUndo();dupItem(${si},${ii})">⧉</button>
+          <button class="btn-icon" onclick="pushUndo();state.sections[${si}].items.splice(${ii},1);assignNums();renderEdit();renderPreview()">✕</button>
+        </div>
+        <div class="item-opts">
+          <label><input type="checkbox" ${p.required?"checked":""} onchange="state.sections[${si}].items[${ii}].required=this.checked;renderPreview()"> ★必須</label>
+          <label><input type="checkbox" ${p.numbered!==false?"checked":""} onchange="state.sections[${si}].items[${ii}].numbered=this.checked;assignNums();renderEdit();renderPreview()"> 通し番号</label>
+        </div>
+        <div class="note-inp-wrap">${regRichInline("s"+si+"_i"+ii+"_nt", p.note||"", v=>{state.sections[si].items[ii].note=v;renderPreview();}, "※項目注釈テキスト", "note-inp")}</div>
+      </div>`;
+    });
+    items_h += `<button class="btn btn-add" style="width:100%;margin-top:2px" onclick="pushUndo();addItem(${si})">＋ 前後ペア追加</button>`;
+
+  } else if(sec.type==="inspection") {
+    (sec.items||[]).forEach((it,ii)=>{
+      items_h += `<div class="item-wrap" data-si="${si}" data-ii="${ii}" draggable="true">
+        <div class="item-head">
+          <span class="dh">⠿</span>
+          ${regRichInline("s"+si+"_i"+ii+"_lbl", it.label, v=>{state.sections[si].items[ii].label=v;renderPreview();}, "確認項目名", "item-lbl-inp")}
+          <label style="font-size:11px;white-space:nowrap"><input type="checkbox" ${it.required?"checked":""} onchange="state.sections[${si}].items[${ii}].required=this.checked;renderPreview()"> ★</label>
+          <button class="btn-icon" title="複製" onclick="pushUndo();dupItem(${si},${ii})">⧉</button>
+          <button class="btn-icon" onclick="pushUndo();state.sections[${si}].items.splice(${ii},1);renderEdit();renderPreview()">✕</button>
+        </div>
+      </div>`;
+    });
+    items_h += `<button class="btn btn-add" style="width:100%;margin-top:2px" onclick="pushUndo();addItem(${si})">＋ 項目追加</button>`;
+
+  } else if(sec.type==="misc") {
+    (sec.items||[]).forEach((it,ii)=>{
+      items_h += `<div class="item-wrap" data-si="${si}" data-ii="${ii}" draggable="true">
+        <div class="item-head">
+          <span class="dh">⠿</span>
+          <span class="num-tag">${it.num!=null?it.num:"―"}</span>
+          ${regRichInline("s"+si+"_i"+ii+"_lbl", it.label, v=>{state.sections[si].items[ii].label=v;renderPreview();}, "項目名", "item-lbl-inp")}
+          <button class="btn-icon" title="複製" onclick="pushUndo();dupItem(${si},${ii})">⧉</button>
+          <button class="btn-icon" onclick="pushUndo();state.sections[${si}].items.splice(${ii},1);renderEdit();renderPreview()">✕</button>
+        </div>
+        <div class="item-opts">
+          <label><input type="checkbox" ${it.required?"checked":""} onchange="state.sections[${si}].items[${ii}].required=this.checked;renderPreview()"> ★</label>
+          <label><input type="checkbox" ${it.numbered!==false?"checked":""} onchange="state.sections[${si}].items[${ii}].numbered=this.checked;assignNums();renderEdit();renderPreview()"> 通し番号</label>
+          <select onchange="state.sections[${si}].items[${ii}].inputType=this.value;renderPreview()">
+            <option value="yesno" ${(it.inputType||"yesno")==="yesno"?"selected":""}>有・無</option>
+            <option value="check" ${it.inputType==="check"?"selected":""}>チェック□</option>
+          </select>
+          <label><input type="checkbox" ${it.hasComment?"checked":""} onchange="state.sections[${si}].items[${ii}].hasComment=this.checked;renderPreview()"> コメント欄</label>
+        </div>
+      </div>`;
+    });
+    items_h += `<button class="btn btn-add" style="width:100%;margin-top:2px" onclick="pushUndo();addItem(${si})">＋ 項目追加</button>`;
+
+  } else if(sec.type==="remarks") {
+    items_h += `<div class="field-row">
+      <label style="font-size:11px;color:#666">備考行数</label>
+      <input type="number" min="1" max="10" value="${(sec.items||[]).length||3}"
+        style="width:50px;border:1px solid #ccc;border-radius:3px;padding:2px 4px;font-size:12px"
+        onchange="pushUndo();state.sections[${si}].items=Array.from({length:parseInt(this.value)||3},(_,i)=>({label:'備考 '+(i+1)}));renderPreview()">
+    </div>`;
+
+  } else if(sec.type==="spacer") {
+    items_h += `<div class="field-row">
+      <label style="font-size:11px;color:#666">高さ (mm)</label>
+      <input type="number" min="1" max="100" value="${sec.height||8}"
+        style="width:60px;border:1px solid #ccc;border-radius:3px;padding:2px 4px;font-size:12px"
+        oninput="state.sections[${si}].height=parseInt(this.value)||8;renderPreview()">
+      <span style="font-size:11px;color:#aaa"> mm の空白を挿入</span>
+    </div>`;
+  }
+
+  return `<div class="sec-box" id="secbox-${si}" data-si="${si}" draggable="true">
+    <div class="sec-head${headCls}" onclick="toggleSec(${si})">
+      <span class="dh" onclick="event.stopPropagation()" title="ドラッグして並び替え">⠿</span>
+      <span class="sec-lbl">${esc(sec.title||"（無題）")}</span>
+      <span class="type-tag">${TN[sec.type]||sec.type}</span>
+      <button class="btn-icon" title="セクション複製" onclick="event.stopPropagation();pushUndo();dupSec(${si})">⧉</button>
+      <button class="btn-icon" onclick="event.stopPropagation();pushUndo();deleteSec(${si})" title="削除">✕</button>
+    </div>
+    <div class="sec-body" id="secbody-${si}">${meta}${items_h}</div>
+  </div>`;
+}
+
+function toggleSec(si){ const el=document.getElementById("secbody-"+si); if(el) el.classList.toggle("open"); }
+function deleteSec(si){ state.sections.splice(si,1); assignNums(); renderEdit(); renderPreview(); setStatus("🗑 セクションを削除しました（Cmd+Z で元に戻せます）", false); }
+function dupSec(si){
+  const copy = JSON.parse(JSON.stringify(state.sections[si]));
+  copy.id = "s"+Date.now();
+  state.sections.splice(si+1,0,copy);
+  assignNums(); renderEdit(); renderPreview();
+  setTimeout(()=>{ const el=document.getElementById("secbody-"+(si+1)); if(el) el.classList.add("open"); },50);
+}
+function addSection(){ state.sections.push({id:"s"+Date.now(),title:"■ 新しいセクション",type:"photo",note:"",timing:"",items:[]}); assignNums(); renderEdit(); renderPreview(); setTimeout(()=>{ const el=document.getElementById("secbody-"+(state.sections.length-1)); if(el) el.classList.add("open"); },50); }
+function dupItem(si,ii){
+  const copy = JSON.parse(JSON.stringify(state.sections[si].items[ii]));
+  state.sections[si].items.splice(ii+1,0,copy);
+  assignNums(); renderEdit(); renderPreview();
+  setTimeout(()=>{ const el=document.getElementById("secbody-"+si); if(el) el.classList.add("open"); },50);
+}
+function addItem(si){
+  const sec=state.sections[si];
+  if(sec.type==="photo") sec.items.push({label:"新しい写真項目",required:false,numbered:true,note:"",hasComment:false});
+  else if(sec.type==="beforeafter") sec.items.push({beforeLabel:"前写真",afterLabel:"後写真",required:false,numbered:true,note:""});
+  else if(sec.type==="inspection") sec.items.push({label:"新しい確認項目",required:false});
+  else if(sec.type==="misc") sec.items.push({label:"新しい項目",required:true,numbered:true,inputType:"yesno",hasComment:true});
+  assignNums(); renderEdit(); renderPreview();
+  setTimeout(()=>{ const el=document.getElementById("secbody-"+si); if(el) el.classList.add("open"); },50);
+}
+
+// ══════════════════════════════════════
+// DRAG AND DROP — sections & items
+// ══════════════════════════════════════
+let dd = {type:null,si:null,ii:null};
+
+function initDrag(){
+  document.querySelectorAll(".sec-box[draggable]").forEach(el=>{
+    el.addEventListener("dragstart",e=>{
+      if(e.target.closest(".sec-body,button,input,select,a,.hdr-field-item,.rich-inp")) { e.preventDefault(); return; }
+      dd={type:"sec",si:parseInt(el.dataset.si)};
+      e.dataTransfer.effectAllowed="move"; e.stopPropagation();
+      setTimeout(()=>el.style.opacity=".4",0);
+    });
+    el.addEventListener("dragend",()=>{ el.style.opacity=""; cleanDD(); });
+    el.addEventListener("dragover",e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(dd.type!=="sec") return;
+      const tsi=parseInt(el.dataset.si); if(tsi===dd.si) return;
+      cleanDD();
+      const mid=el.getBoundingClientRect().top+el.getBoundingClientRect().height/2;
+      el.classList.add(e.clientY<mid?"drag-over-above":"drag-over-below");
+    });
+    el.addEventListener("drop",e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(dd.type!=="sec") return;
+      const tsi=parseInt(el.dataset.si); if(tsi===dd.si){cleanDD();return;}
+      const above=el.classList.contains("drag-over-above");
+      const moved=state.sections.splice(dd.si,1)[0];
+      let ni=above?tsi:tsi+1; if(dd.si<tsi) ni--;
+      state.sections.splice(Math.max(0,Math.min(ni,state.sections.length)),0,moved);
+      pushUndo(); assignNums(); renderEdit(); renderPreview();
+    });
+  });
+
+  document.querySelectorAll(".item-wrap[draggable]").forEach(el=>{
+    el.addEventListener("dragstart",e=>{
+      e.stopPropagation();
+      if(e.target.closest(".rich-inp,button,input,select")) { e.preventDefault(); return; }
+      dd={type:"item",si:parseInt(el.dataset.si),ii:parseInt(el.dataset.ii)};
+      e.dataTransfer.effectAllowed="move";
+      setTimeout(()=>el.style.opacity=".4",0);
+    });
+    el.addEventListener("dragend",()=>{ el.style.opacity=""; cleanDD(); });
+    el.addEventListener("dragover",e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(dd.type!=="item"||dd.si!==parseInt(el.dataset.si)) return;
+      const tii=parseInt(el.dataset.ii); if(tii===dd.ii) return;
+      cleanDD();
+      const mid=el.getBoundingClientRect().top+el.getBoundingClientRect().height/2;
+      el.classList.add(e.clientY<mid?"drag-over-above":"drag-over-below");
+    });
+    el.addEventListener("drop",e=>{
+      e.preventDefault(); e.stopPropagation();
+      if(dd.type!=="item") return;
+      const tsi=parseInt(el.dataset.si),tii=parseInt(el.dataset.ii);
+      if(dd.si!==tsi||tii===dd.ii){cleanDD();return;}
+      const above=el.classList.contains("drag-over-above");
+      const items=state.sections[tsi].items;
+      const moved=items.splice(dd.ii,1)[0];
+      let ni=above?tii:tii+1; if(dd.ii<tii) ni--;
+      items.splice(Math.max(0,Math.min(ni,items.length)),0,moved);
+      pushUndo(); assignNums(); renderEdit(); renderPreview();
+      setTimeout(()=>{ const sb=document.getElementById("secbody-"+tsi); if(sb) sb.classList.add("open"); },50);
+    });
+  });
+}
+
+function cleanDD(){
+  document.querySelectorAll(".drag-over-above,.drag-over-below,.drag-over-left,.drag-over-right").forEach(el=>{
+    el.classList.remove("drag-over-above","drag-over-below","drag-over-left","drag-over-right");
+  });
+}
+
+// ══════════════════════════════════════
+// NOTE DRAG
+// ══════════════════════════════════════
+function initNoteDrag() {
+  let ndrag = null;
+  document.querySelectorAll(".note-item[draggable]").forEach(el => {
+    el.addEventListener("dragstart", e => {
+      if(e.target.closest(".rich-inp,button,input")) { e.preventDefault(); return; }
+      ndrag = parseInt(el.dataset.ni);
+      e.dataTransfer.effectAllowed = "move"; e.stopPropagation();
+      setTimeout(() => el.style.opacity = ".4", 0);
+    });
+    el.addEventListener("dragend", () => {
+      el.style.opacity = "";
+      document.querySelectorAll(".note-item").forEach(e => e.classList.remove("drag-over-above","drag-over-below"));
+      ndrag = null;
+    });
+    el.addEventListener("dragover", e => {
+      e.preventDefault(); e.stopPropagation();
+      if(ndrag===null) return;
+      const tni = parseInt(el.dataset.ni); if(tni===ndrag) return;
+      document.querySelectorAll(".note-item").forEach(e => e.classList.remove("drag-over-above","drag-over-below"));
+      const mid = el.getBoundingClientRect().top + el.getBoundingClientRect().height/2;
+      el.classList.add(e.clientY < mid ? "drag-over-above" : "drag-over-below");
+    });
+    el.addEventListener("drop", e => {
+      e.preventDefault(); e.stopPropagation();
+      if(ndrag===null) return;
+      const tni = parseInt(el.dataset.ni); if(tni===ndrag){cleanDD();return;}
+      const above = el.classList.contains("drag-over-above");
+      const moved = state.notes.splice(ndrag,1)[0];
+      let ni = above ? tni : tni+1; if(ndrag < tni) ni--;
+      state.notes.splice(Math.max(0, Math.min(ni, state.notes.length)), 0, moved);
+      pushUndo(); renderEdit(); renderPreview();
+    });
+  });
+}
+
+// ══════════════════════════════════════
+// HEADER ROW DRAG
+// ══════════════════════════════════════
+function initHdrDrag(){
+  let hdrDd = {ri:null};
+  document.querySelectorAll(".hdr-row-box[draggable]").forEach(el=>{
+    el.addEventListener("dragstart",e=>{
+      if(e.target.closest(".hdr-field-item,button,input,select")) { e.preventDefault(); return; }
+      hdrDd.ri = parseInt(el.dataset.ri);
+      e.dataTransfer.effectAllowed = "move"; e.stopPropagation();
+      setTimeout(()=>el.style.opacity=".4",0);
+    });
+    el.addEventListener("dragend",()=>{
+      el.style.opacity="";
+      document.querySelectorAll(".hdr-row-box").forEach(e=>e.classList.remove("drag-over-above","drag-over-below"));
+    });
+    el.addEventListener("dragover",e=>{
+      e.preventDefault(); e.stopPropagation();
+      const tri=parseInt(el.dataset.ri); if(tri===hdrDd.ri) return;
+      document.querySelectorAll(".hdr-row-box").forEach(e=>e.classList.remove("drag-over-above","drag-over-below"));
+      const mid=el.getBoundingClientRect().top+el.getBoundingClientRect().height/2;
+      el.classList.add(e.clientY<mid?"drag-over-above":"drag-over-below");
+    });
+    el.addEventListener("drop",e=>{
+      e.preventDefault(); e.stopPropagation();
+      const tri=parseInt(el.dataset.ri); if(tri===hdrDd.ri) return;
+      const above=el.classList.contains("drag-over-above");
+      const moved=state.headerRows.splice(hdrDd.ri,1)[0];
+      let ni=above?tri:tri+1; if(hdrDd.ri<tri) ni--;
+      state.headerRows.splice(Math.max(0,Math.min(ni,state.headerRows.length)),0,moved);
+      pushUndo(); renderEdit(); renderPreview();
+    });
+  });
+}
+
+// ══════════════════════════════════════
+// HEADER FIELD DRAG
+// ══════════════════════════════════════
+function initHdrFieldDrag(){
+  let fdd = {ri:null, fi:null};
+  document.querySelectorAll(".hdr-field-item[draggable]").forEach(el=>{
+    el.addEventListener("dragstart",e=>{
+      if(e.target.matches("input,select,button")) { e.preventDefault(); return; }
+      fdd.ri = parseInt(el.dataset.ri); fdd.fi = parseInt(el.dataset.fi);
+      e.dataTransfer.effectAllowed = "move"; e.stopPropagation();
+      setTimeout(()=>el.style.opacity=".4",0);
+    });
+    el.addEventListener("dragend",()=>{
+      el.style.opacity="";
+      document.querySelectorAll(".hdr-field-item").forEach(e=>e.classList.remove("drag-over-left","drag-over-right"));
+    });
+    el.addEventListener("dragover",e=>{
+      e.preventDefault(); e.stopPropagation();
+      const tri=parseInt(el.dataset.ri), tfi=parseInt(el.dataset.fi);
+      if(tri!==fdd.ri||tfi===fdd.fi) return;
+      document.querySelectorAll(".hdr-field-item").forEach(e=>e.classList.remove("drag-over-left","drag-over-right"));
+      const mid=el.getBoundingClientRect().left+el.getBoundingClientRect().width/2;
+      el.classList.add(e.clientX<mid?"drag-over-left":"drag-over-right");
+    });
+    el.addEventListener("drop",e=>{
+      e.preventDefault(); e.stopPropagation();
+      const tri=parseInt(el.dataset.ri), tfi=parseInt(el.dataset.fi);
+      if(tri!==fdd.ri||tfi===fdd.fi) return;
+      const toLeft=el.classList.contains("drag-over-left");
+      const row=state.headerRows[fdd.ri];
+      const moved=row.splice(fdd.fi,1)[0];
+      let ni=toLeft?tfi:tfi+1; if(fdd.fi<tfi) ni--;
+      row.splice(Math.max(0,Math.min(ni,row.length)),0,moved);
+      pushUndo(); renderEdit(); renderPreview();
+    });
+  });
+}
+
+// ══════════════════════════════════════
+// PREVIEW RENDER
+// ══════════════════════════════════════
+function renderPreview() {
+  if(!state.sections.length && !state.title) return;
+  const sheet = document.getElementById("preview-sheet");
+  const ls = state.lineSpacing||"normal";
+  sheet.className = "preview-sheet" + (ls==="tight"?" ls-tight":ls==="wide"?" ls-wide":"");
+
+  const rows = state.headerRows || [];
+  let hdrHtml = "<table class=\"hdr-tbl\">";
+  rows.forEach(row => {
+    hdrHtml += "<tr>";
+    row.forEach(f => {
+      const star = f.req ? "<span class=\"r-star\">★</span> " : "";
+      hdrHtml += `<td class="hdr-lbl" style="white-space:nowrap">${star}${fmt(f.label)}</td>`;
+      hdrHtml += `<td style="width:${f.pct||10}%">${fmt(f.val||"")}</td>`;
+    });
+    hdrHtml += "</tr>";
+  });
+  hdrHtml += "</table>";
+
+  let h = `
+    <div class="p-title">${fmt(state.title)}</div>
+    <div class="p-subtitle">${fmt(state.subtitle||"")}</div>
+    <ul class="p-notes">${(state.notes||[]).map(n=>`<li>${fmt(n)}</li>`).join("")}</ul>
+    ${hdrHtml}`;
+
+  state.sections.forEach(sec=>{
+    if(sec.type==="inspection") h += pvInspection(sec);
+    else if(sec.type==="misc") h += pvMisc(sec);
+    else if(sec.type==="photo") h += pvPhoto(sec);
+    else if(sec.type==="beforeafter") h += pvBeforeAfter(sec);
+    else if(sec.type==="remarks") h += pvRemarks(sec);
+    else if(sec.type==="spacer") h += pvSpacer(sec);
+  });
+
+  sheet.innerHTML = h;
+}
+
+function secBarStyle(sec) {
+  const t = sec.timing||"";
+  if(t==="before") return "background:#1a6aaa;";
+  if(t==="after") return "background:#1a7a3a;";
+  return "background:#222;";
+}
+function secRowBg(sec) {
+  const t = sec.timing||"";
+  if(t==="before") return "#eef6ff";
+  if(t==="after") return "#eeffee";
+  return "";
+}
+
+function secNote(sec){ return sec.note?`<div style="font-size:7.5pt;color:#555;padding:3px 6px 2px;background:#fffdf0;border:1px solid #e8e4c0;border-top:none;margin-bottom:2px">※ ${fmt(sec.note)}</div>`:""; }
+
+// inspection ○×
+function pvInspection(sec){
+  const items = sec.items||[];
+  const bg = secRowBg(sec);
+  let tr = "";
+  for(let i = 0; i < items.length; i += 2){
+    const l=items[i], r=items[i+1];
+    const rowBg = bg ? `style="background:${bg}"` : "";
+    tr += `<tr ${rowBg}>
+      <td class="p-nl" ${bg?`style="background:${bg}"`:"style=\"background:#f8f8f5\""}>${l?(l.required?"<span class=\"r-star\">★</span> ":"")+fmt(l.label):""}</td>
+      <td class="p-nv">${l?"（◯・×）":""}</td>
+      <td class="p-nl" ${bg?`style="background:${bg}"`:"style=\"background:#f8f8f5\""}>${r?(r.required?"<span class=\"r-star\">★</span> ":"")+fmt(r.label):""}</td>
+      <td class="p-nv">${r?"（◯・×）":""}</td>
+    </tr>`;
+  }
+  return `<div class="sec-bar" style="${secBarStyle(sec)}">${fmt(sec.title)}</div>${secNote(sec)}<table class="p-grid">${tr}</table>`;
+}
+
+// misc — 有□ 無□ 横並び、コメント同一行内
+function pvMisc(sec){
+  const bg = secRowBg(sec);
+  const rows=(sec.items||[]).map(it=>{
+    const numBg = it.num==null ? "background:#bbb;" : "";
+    const numVal = it.num!=null ? it.num : "";
+    const yn = (it.inputType||"yesno")==="yesno"
+      ? `<span style="white-space:nowrap;font-size:8pt">有□&nbsp;無□</span>`
+      : `<span style="font-size:8pt">□</span>`;
+    const cmt = it.hasComment
+      ? `<span style="font-size:7.5pt;color:#666;margin-left:5px;white-space:nowrap">コメント：<span style="display:inline-block;min-width:100px;border-bottom:0.5px solid #aaa">&nbsp;</span></span>`
+      : "";
+    const rowBg = bg ? `background:${bg};` : "";
+    return `<tr style="${rowBg}">
+      <td class="misc-n" style="${numBg}">${numVal}</td>
+      <td style="padding:3px 5px">${it.required?"<span class=\"r-star\">★</span> ":""}${fmt(it.label)}</td>
+      <td style="white-space:nowrap;padding:3px 6px;vertical-align:middle">${yn}${cmt}</td>
+    </tr>`;
+  }).join("");
+  return `<div class="sec-bar" style="${secBarStyle(sec)}">${fmt(sec.title)}</div>${secNote(sec)}<table class="misc-tbl">${rows}</table>`;
+}
+
+// photo
+function pvPhoto(sec){
+  const items = sec.items||[];
+  const bg = secRowBg(sec);
+  const hBg = bg || "#f0f0ec";
+  const thead = `<thead><tr class="photo-thead">
+    <td class="photo-n" style="background:#555;color:#fff">No.</td>
+    <td style="background:${hBg};font-size:7pt;font-weight:700;padding:2px 5px">項目名</td>
+    <td class="photo-chk" style="background:${hBg};font-size:7pt;font-weight:700">撮影</td>
+    <td class="photo-n" style="background:#555;color:#fff">No.</td>
+    <td style="background:${hBg};font-size:7pt;font-weight:700;padding:2px 5px">項目名</td>
+    <td class="photo-chk" style="background:${hBg};font-size:7pt;font-weight:700">撮影</td>
+  </tr></thead>`;
+  let tr = "";
+  for(let i = 0; i < items.length; i += 2){
+    const l = items[i], r = items[i+1];
+    const lBg = (l && l.num==null) ? "background:#bbb;" : "";
+    const rBg = (r && r.num==null) ? "background:#bbb;" : "";
+    const rowBg = bg ? `background:${bg};` : "";
+    const lh = l
+      ? `<td class="photo-n" style="${lBg}">${l.num!=null?l.num:""}</td><td style="${rowBg}">${l.required?"<span class=\"r-star\">★</span> ":""} ${fmt(l.label)}${l.note?`<br><span class="photo-note">※${fmt(l.note)}</span>`:""}</td><td class="photo-chk" style="${rowBg}">□</td>`
+      : `<td></td><td></td><td></td>`;
+    const rh = r
+      ? `<td class="photo-n" style="${rBg}">${r.num!=null?r.num:""}</td><td style="${rowBg}">${r.required?"<span class=\"r-star\">★</span> ":""} ${fmt(r.label)}${r.note?`<br><span class="photo-note">※${fmt(r.note)}</span>`:""}</td><td class="photo-chk" style="${rowBg}">□</td>`
+      : `<td></td><td></td><td></td>`;
+    tr += `<tr>${lh}${rh}</tr>`;
+  }
+  return `<div class="sec-bar" style="${secBarStyle(sec)}">${fmt(sec.title)}</div>${secNote(sec)}<table class="photo-tbl">${thead}<tbody>${tr}</tbody></table>`;
+}
+
+// before/after
+function pvBeforeAfter(sec){
+  const items = sec.items||[];
+  const bg = secRowBg(sec);
+  const beforeBg = bg || "#d8eaf5";
+  const afterBg  = bg || "#d8f5e0";
+  const thead = `<thead><tr class="photo-thead">
+    <td class="photo-n" style="background:#555;color:#fff">No.</td>
+    <td style="background:${beforeBg};font-size:7pt;font-weight:700;padding:2px 5px">除草前</td>
+    <td class="photo-chk" style="background:${beforeBg};font-size:7pt;font-weight:700">撮影</td>
+    <td class="photo-n" style="background:#555;color:#fff">No.</td>
+    <td style="background:${afterBg};font-size:7pt;font-weight:700;padding:2px 5px">除草後</td>
+    <td class="photo-chk" style="background:${afterBg};font-size:7pt;font-weight:700">撮影</td>
+  </tr></thead>`;
+  let tr = "";
+  items.forEach(p=>{
+    const star = p.required ? "<span class=\"r-star\">★</span> " : "";
+    const bnBg = p.bn==null ? "background:#bbb;" : "";
+    const anBg = p.an==null ? "background:#bbb;" : "";
+    const noteRow = p.note ? `<tr><td colspan="6" style="font-size:7pt;color:#777;padding:1px 5px 2px 28px;border-top:none">※${fmt(p.note)}</td></tr>` : "";
+    tr += `<tr>
+      <td class="photo-n" style="${bnBg}">${p.bn!=null?p.bn:""}</td>
+      <td style="background:${beforeBg}">${star}${fmt(p.beforeLabel||"")}</td>
+      <td class="photo-chk">□</td>
+      <td class="photo-n" style="${anBg}">${p.an!=null?p.an:""}</td>
+      <td style="background:${afterBg}">${star}${fmt(p.afterLabel||"")}</td>
+      <td class="photo-chk">□</td>
+    </tr>${noteRow}`;
+  });
+  return `<div class="sec-bar" style="${secBarStyle(sec)}">${fmt(sec.title)}</div>${secNote(sec)}<table class="photo-tbl">${thead}<tbody>${tr}</tbody></table>`;
+}
+
+// remarks
+function pvRemarks(sec){
+  const items=sec.items||[{label:"備考 1"},{label:"備考 2"},{label:"備考 3"}];
+  const bg = secRowBg(sec);
+  const rowStyle = bg ? `style="background:${bg}"` : "";
+  return `<div class="sec-bar" style="${secBarStyle(sec)}">${fmt(sec.title)}</div>${secNote(sec)}<table class="rmk-tbl">${items.map(it=>`<tr ${rowStyle}><td class="rmk-lbl">${fmt(it.label)}</td><td></td></tr>`).join("")}</table>`;
+}
+
+// spacer
+function pvSpacer(sec){
+  return `<div style="height:${sec.height||8}mm"></div>`;
+}
+
+// ══════════════════════════════════════
+// TEMPLATE SYSTEM
+// ══════════════════════════════════════
+function renderTmplPanel(){
+  const tmpl=getTemplates();
+  const sc=document.getElementById("sel-client");
+  const sp=document.getElementById("sel-project");
+  const ss=document.getElementById("sel-sub");
+  const curC=sc.value, curP=sp.value, curS=ss.value;
+  sc.innerHTML="<option value=\"\">── 選択 ──</option>"+Object.keys(tmpl).map(c=>`<option value="${esc(c)}" ${c===curC?"selected":""}>${esc(c)}</option>`).join("");
+  sp.innerHTML="<option value=\"\">── 選択 ──</option>";
+  if(curC&&tmpl[curC]) sp.innerHTML+=Object.keys(tmpl[curC]).map(p=>`<option value="${esc(p)}" ${p===curP?"selected":""}>${esc(p)}</option>`).join("");
+  ss.innerHTML="<option value=\"__default\">（全社共通）</option>";
+  if(curC&&curP&&tmpl[curC]?.[curP]) ss.innerHTML+=Object.keys(tmpl[curC][curP]).filter(k=>k!=="__meta"&&k!=="__default").map(s=>`<option value="${esc(s)}" ${s===curS?"selected":""}>${esc(s)}</option>`).join("");
+  if(curS&&[...ss.options].some(o=>o.value===curS)) ss.value=curS;
+  renderTmplList(tmpl);
+  renderTmplPreview(tmpl,curC,curP,ss.value||"__default");
+}
+
+function renderTmplList(tmpl){
+  const area=document.getElementById("tmpl-list-area"); if(!area) return;
+  const rows=[];
+  for(const [c,projs] of Object.entries(tmpl)){
+    if(typeof projs!=="object") continue;
+    for(const [p,subs] of Object.entries(projs)){
+      if(typeof subs!=="object") continue;
+      for(const [s,templates] of Object.entries(subs)){
+        if(!templates||typeof templates!=="object") continue;
+        if(templates.title){ rows.push({c,p,s,name:templates._tmplName||"（名前なし）",data:templates}); }
+        else { for(const [name,data] of Object.entries(templates)){ if(!data||typeof data!=="object"||!data.title) continue; rows.push({c,p,s,name,data}); } }
+      }
+    }
+  }
+  if(!rows.length){ area.innerHTML="<div class=\"tmpl-list-empty\">保存済みテンプレートはありません</div>"; return; }
+  const selC=document.getElementById("sel-client").value;
+  const selP=document.getElementById("sel-project").value;
+  const selS=document.getElementById("sel-sub").value||"__default";
+  const selName=document.getElementById("t-tmplname").value.trim();
+  let h=`<div class="tmpl-list"><div class="tmpl-list-header"><span>元請け</span><span>案件</span><span>下請け</span><span>テンプレート名</span><span>操作</span></div>`;
+  rows.forEach(({c,p,s,name,data})=>{
+    const isSelected=c===selC&&p===selP&&s===selS&&name===selName;
+    const subLabel=s==="__default"?"全社共通":s;
+    h+=`<div class="tmpl-list-row ${isSelected?"selected":""}" onclick="selectTmplRow('${esc(c)}','${esc(p)}','${esc(s)}','${esc(name)}')">
+      <span class="tl-cell" title="${esc(c)}">${esc(c)}</span>
+      <span class="tl-cell" title="${esc(p)}">${esc(p)}</span>
+      <span class="tl-cell" title="${esc(subLabel)}">${esc(subLabel)}</span>
+      <span class="tl-cell tl-name" title="${esc(name)}">${esc(name)}</span>
+      <span class="tmpl-list-actions">
+        <button class="btn btn-b btn-sm" style="font-size:10px;padding:2px 6px" onclick="event.stopPropagation();loadTmplDirect('${esc(c)}','${esc(p)}','${esc(s)}','${esc(name)}')">読込</button>
+        <button class="btn btn-danger btn-sm" style="font-size:10px;padding:2px 5px" onclick="event.stopPropagation();deleteTmplDirect('${esc(c)}','${esc(p)}','${esc(s)}','${esc(name)}')">削除</button>
+      </span>
+    </div>`;
+  });
+  h+="</div>"; area.innerHTML=h;
+}
+
+function selectTmplRow(c,p,s,name){
+  const sc=document.getElementById("sel-client"),sp=document.getElementById("sel-project"),ss=document.getElementById("sel-sub"),sn=document.getElementById("t-tmplname");
+  const tmpl=getTemplates();
+  if(sc) sc.value=c;
+  if(sp){ sp.innerHTML="<option value=\"\">── 選択 ──</option>"; if(tmpl[c]) sp.innerHTML+=Object.keys(tmpl[c]).map(pk=>`<option value="${esc(pk)}">${esc(pk)}</option>`).join(""); sp.value=p; }
+  if(ss){ ss.innerHTML="<option value=\"__default\">（全社共通）</option>"; if(tmpl[c]?.[p]) ss.innerHTML+=Object.keys(tmpl[c][p]).filter(k=>k!=="__meta"&&k!=="__default").map(sk=>`<option value="${esc(sk)}">${esc(sk)}</option>`).join(""); ss.value=s; }
+  if(sn) sn.value=name||"";
+  renderTmplList(tmpl);
+  const data=tmpl?.[c]?.[p]?.[s]?.[name]||tmpl?.[c]?.[p]?.[s];
+  renderTmplPreviewData(data,c,p,s,name);
+}
+
+function loadTmplDirect(c,p,s,name){
+  const tmpl=getTemplates();
+  const bucket=tmpl?.[c]?.[p]?.[s];
+  const data=(bucket&&!bucket.title)?bucket[name]:bucket;
+  if(!data||typeof data!=="object"||!data.title){ alert("データが見つかりません"); return; }
+  pushUndo(); state=JSON.parse(JSON.stringify(data)); delete state._tmplName;
+  if(!state.lineSpacing) state.lineSpacing="normal";
+  state.sections=(state.sections||[]).map(s=>({timing:"",note:"",... s}));
+  const nameEl=document.getElementById("t-tmplname"); if(nameEl) nameEl.value=name||data._tmplName||"";
+  assignNums(); renderEdit(); renderPreview(); switchTab("edit");
+  setStatus(`📂 読込完了: ${c} → ${p} → ${s==="__default"?"（全社共通）":s} [${name}]`,false);
+}
+
+function deleteTmplDirect(c,p,s,name){
+  const sub=s==="__default"?"（全社共通）":s;
+  if(!confirm(`「${name}」を削除します。よろしいですか？\n${c} → ${p} → ${sub}`)) return;
+  const tmpl=getTemplates();
+  const bucket=tmpl?.[c]?.[p]?.[s];
+  if(bucket&&!bucket.title&&bucket[name]!==undefined){ delete bucket[name]; if(!Object.keys(bucket).length) delete tmpl[c][p][s]; }
+  else if(tmpl?.[c]?.[p]?.[s]?.title){ delete tmpl[c][p][s]; }
+  if(tmpl[c]?.[p]&&!Object.keys(tmpl[c][p]).length) delete tmpl[c][p];
+  if(tmpl[c]&&!Object.keys(tmpl[c]).length) delete tmpl[c];
+  saveTemplates(tmpl); renderTmplPanel();
+}
+
+function onSelChange(){
+  const tmpl=getTemplates();
+  const c=document.getElementById("sel-client").value;
+  const p=document.getElementById("sel-project").value;
+  const prevSub=document.getElementById("sel-sub").value||"__default";
+  const ss=document.getElementById("sel-sub");
+  ss.innerHTML="<option value=\"__default\">（全社共通）</option>";
+  if(c&&p&&tmpl[c]?.[p]) ss.innerHTML+=Object.keys(tmpl[c][p]).filter(k=>k!=="__meta"&&k!=="__default").map(sk=>`<option value="${esc(sk)}">${esc(sk)}</option>`).join("");
+  if([...ss.options].some(o=>o.value===prevSub)) ss.value=prevSub;
+  renderTmplPreview(tmpl,c,p,ss.value||"__default");
+}
+
+function renderTmplPreview(tmpl,c,p,s){ const area=document.getElementById("tmpl-preview-area"); if(area) area.innerHTML=""; }
+function renderTmplPreviewData(data,c,p,s,name){
+  const area=document.getElementById("tmpl-preview-area"); if(!area) return;
+  if(!data||typeof data!=="object"||!data.title){ area.innerHTML=""; return; }
+  const secs=data.sections||[];
+  const totalPhoto=secs.filter(s=>s.type==="photo").reduce((a,s)=>(s.items||[]).length+a,0);
+  const totalBF=secs.filter(s=>s.type==="beforeafter").reduce((a,s)=>(s.items||[]).length+a,0);
+  const sub=s==="__default"?"（全社共通）":s;
+  area.innerHTML=`<div class="tmpl-preview">
+    <h4>🔍 ${esc(name)} — プレビュー</h4>
+    <div class="tp-row" style="font-size:10px;color:#888">${esc(c)} → ${esc(p)} → ${esc(sub)}</div>
+    <div class="tp-row">📄 <b>${esc(data.title||"")}</b>${data.subtitle?" / "+esc(data.subtitle):""}</div>
+    <div class="tp-row">📐 セクション数：<b>${secs.length}</b> ／ 写真番号総数：<b>${totalPhoto+totalBF*2}</b></div>
+    <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:3px">${secs.map(sec=>`<span class="tp-tag">${esc(sec.title||sec.type)}</span>`).join("")}</div>
+    <div style="margin-top:6px"><button class="btn btn-b btn-sm" onclick="loadTmplDirect('${esc(c)}','${esc(p)}','${esc(s)}','${esc(name)}')">📂 このテンプレートを読込</button></div>
+  </div>`;
+}
+
+function addClient(){
+  const name=document.getElementById("t-client").value.trim(); if(!name){ alert("企業名を入力してください"); return; }
+  const tmpl=getTemplates(); if(!tmpl[name]) tmpl[name]={};
+  saveTemplates(tmpl); document.getElementById("t-client").value=""; document.getElementById("sel-client").value="";
+  renderTmplPanel(); setTimeout(()=>{ document.getElementById("sel-client").value=name; onSelChange(); },50);
+}
+function addProject(){
+  const c=document.getElementById("sel-client").value; if(!c){ alert("元請け企業を選択してください"); return; }
+  const name=document.getElementById("t-project").value.trim(); if(!name){ alert("案件名を入力してください"); return; }
+  const tmpl=getTemplates(); if(!tmpl[c]) tmpl[c]={}; if(!tmpl[c][name]) tmpl[c][name]={};
+  saveTemplates(tmpl); document.getElementById("t-project").value="";
+  renderTmplPanel(); setTimeout(()=>{ document.getElementById("sel-project").value=name; onSelChange(); },50);
+}
+function addSub(){
+  const c=document.getElementById("sel-client").value, p=document.getElementById("sel-project").value;
+  if(!c||!p){ alert("元請け企業と案件を選択してください"); return; }
+  const rawName=document.getElementById("t-sub").value.trim(); if(!rawName){ alert("下請け企業名を入力してください。\n全社共通で保存する場合は「保存」を直接押してください。"); return; }
+  const tmpl=getTemplates(); if(!tmpl[c]) tmpl[c]={}; if(!tmpl[c][p]) tmpl[c][p]={}; if(!tmpl[c][p][rawName]) tmpl[c][p][rawName]=null;
+  saveTemplates(tmpl); document.getElementById("t-sub").value="";
+  const ss=document.getElementById("sel-sub");
+  ss.innerHTML="<option value=\"__default\">（全社共通）</option>"+Object.keys(tmpl[c][p]).filter(k=>k!=="__meta"&&k!=="__default").map(sk=>`<option value="${esc(sk)}">${esc(sk)}</option>`).join("");
+  ss.value=rawName; renderTmplPreview(tmpl,c,p,rawName);
+}
+
+function saveTemplate(){
+  const c=document.getElementById("sel-client").value, p=document.getElementById("sel-project").value;
+  if(!c||!p){ alert("元請け企業と案件を選択してください"); return; }
+  const s=document.getElementById("sel-sub").value||"__default";
+  const tmplName=document.getElementById("t-tmplname").value.trim(); if(!tmplName){ alert("テンプレート名を入力してください"); return; }
+  const tmpl=getTemplates(); if(!tmpl[c]) tmpl[c]={}; if(!tmpl[c][p]) tmpl[c][p]={}; if(!tmpl[c][p][s]||typeof tmpl[c][p][s]!=="object"||tmpl[c][p][s].title) tmpl[c][p][s]={};
+  const data=JSON.parse(JSON.stringify(state)); data._tmplName=tmplName;
+  tmpl[c][p][s][tmplName]=data; saveTemplates(tmpl); renderTmplPanel();
+  setStatus(`✅ 保存しました: ${c} → ${p} → ${s==="__default"?"（全社共通）":s} [${tmplName}]`,false);
+}
+
+// ══════════════════════════════════════
+// FILE SAVE / LOAD
+// ══════════════════════════════════════
+function saveJSON(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="checklist_"+new Date().toISOString().slice(0,10)+".json"; a.click();
+}
+function loadJSON(){
+  const inp=document.createElement("input"); inp.type="file"; inp.accept=".json";
+  inp.onchange=e=>{ const reader=new FileReader(); reader.onload=ev=>{ try{
+    pushUndo(); state=JSON.parse(ev.target.result);
+    if(!state.lineSpacing) state.lineSpacing="normal";
+    state.sections=(state.sections||[]).map(s=>({timing:"",note:"",...s}));
+    assignNums(); renderEdit(); renderPreview(); setStatus("✅ 読込完了",false);
+  }catch(err){ setStatus("❌ JSONの読み込みに失敗しました",true); } }; reader.readAsText(e.target.files[0]); };
+  inp.click();
+}
+
+// ══════════════════════════════════════
+// UTILITY
+// ══════════════════════════════════════
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;") }
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+(function init(){
+  state = {
+    lineSpacing: "normal",
+    title: "除草報告書 必要項目リスト",
+    subtitle: "作業種別：除草",
+    notes: [
+      "除草前と除草後の写真は、角度（写り）が同じになるように撮影してください。",
+      "目視点検により備考がある場合には、備考欄に項目と詳細をご記入ください。",
+      "画像報告時は、番号の順に写真をあげてください。",
+      "★は漏れの多い項目です。チェック忘れのないようご注意ください。"
+    ],
+    headerRows: [
+      [
+        {label:"報告者",      req:false, val:"",                                               pct:12},
+        {label:"★ 発電所名", req:true,  val:"",                                               pct:40},
+        {label:"★ 作業実施日",req:true,  val:"年　月　日",                                    pct:18},
+      ],
+      [
+        {label:"天候",        req:false, val:"晴れ・曇り・雨",                                 pct:14},
+        {label:"作業時間",    req:false, val:"開始（　　：　　）〜 終了（　　：　　）",         pct:55},
+      ]
+    ],
+    sections: [
+      {id:"s1",title:"■目視点検・安全装備",type:"inspection",timing:"",note:"",items:[
+        {label:"目視確認（パワコン）",required:false},{label:"ヘルメット装備確認",required:true},
+        {label:"目視確認（モジュール）",required:false},{label:"防護メガネ装備確認",required:true},
+        {label:"目視確認（フェンス）",required:false},{label:"フェイスシールド装備確認",required:true},
+        {label:"目視確認（架台）",required:false},{label:"レガース装備確認",required:true},
+        {label:"目視確認（その他）",required:false},{label:"金属刃使用の有無について",required:true},
+      ]},
+      {id:"s2",title:"■除草・鍵・看板・その他",type:"misc",timing:"",note:"",items:[
+        {label:"除草不可範囲があるか",required:true,inputType:"yesno",hasComment:true,numbered:true},
+        {label:"近隣からの指摘があったか",required:true,inputType:"yesno",hasComment:true,numbered:true},
+        {label:"鍵に不備があるか",required:true,inputType:"yesno",hasComment:true,numbered:true},
+        {label:"看板に不備があるか",required:true,inputType:"yesno",hasComment:true,numbered:true},
+      ]},
+      {id:"s3",title:"■写真関連（撮影チェック項目）",type:"photo",timing:"",note:"",items:[
+        {label:"使用除草器具写真",required:true,note:"",hasComment:false,numbered:true},
+        {label:"その他使用器具写真",required:true,note:"",hasComment:false,numbered:true},
+        {label:"保護具装備（全身必須：レガース）",required:true,note:"",hasComment:false,numbered:true},
+        {label:"保護具（ヘルメット・防護メガネ・シールド）",required:true,note:"",hasComment:false,numbered:true},
+        {label:"その他保護具装備",required:false,note:"",hasComment:false,numbered:true},
+        {label:"その他保護具装備２",required:false,note:"",hasComment:false,numbered:true},
+        {label:"入場前施錠写真",required:true,note:"",hasComment:false,numbered:true},
+        {label:"退場後施錠写真",required:true,note:"",hasComment:false,numbered:true},
+      ]},
+      {id:"s4",title:"■除草前後写真",type:"beforeafter",timing:"",note:"",items:[
+        {beforeLabel:"敷地内全体写真",afterLabel:"敷地内全体写真",required:false,note:"",numbered:true},
+        {beforeLabel:"パネル周辺写真",afterLabel:"パネル周辺写真",required:false,note:"",numbered:true},
+        {beforeLabel:"東側フェンス周辺写真",afterLabel:"東側フェンス周辺写真",required:false,note:"",numbered:true},
+        {beforeLabel:"西側フェンス周辺写真",afterLabel:"西側フェンス周辺写真",required:false,note:"",numbered:true},
+        {beforeLabel:"南側フェンス周辺写真",afterLabel:"南側フェンス周辺写真",required:false,note:"",numbered:true},
+        {beforeLabel:"北側フェンス周辺写真",afterLabel:"北側フェンス周辺写真",required:false,note:"",numbered:true},
+      ]},
+      {id:"s5",title:"■備考欄",type:"remarks",timing:"",note:"",items:[{label:"備考 1"},{label:"備考 2"},{label:"備考 3"}]}
+    ]
+  };
+  assignNums(); renderEdit(); renderPreview();
+})();
+</script>
+</body>
+</html>

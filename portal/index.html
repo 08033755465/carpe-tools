@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>carpe diem 社員ポータル</title>
+<style>
+  :root{
+    /* グローバル：水色寄りエメラルドグリーン */
+    --green:#0fa48e; --green-d:#0b7d6c; --green-l:#e2f6f2;
+    /* 差し色：勤怠日報ツールと同じ青 */
+    --blue:#1e5299; --blue-d:#163d75; --blue-l:#eaf1fa;
+    --bg:#f3f7f6; --card:#ffffff; --line:#e0e5e3; --text:#1c1c1c;
+    --sub:#6b716b; --pop:#fff8e1; --pop-line:#ffe082;
+    --shadow:0 2px 10px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--bg); color:var(--text); line-height:1.6;
+    max-width:540px; margin:0 auto; min-height:100vh; position:relative;
+  }
+  .hidden{display:none !important;}
+
+  /* ===== ヘッダー ===== */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:var(--green); color:#fff;
+    padding:14px 16px; display:flex; align-items:center; justify-content:space-between;
+    box-shadow:var(--shadow);
+  }
+  header .title{font-size:17px; font-weight:700; letter-spacing:.02em;}
+  header .title small{display:block; font-size:11px; font-weight:400; opacity:.85;}
+  header .user{font-size:12px; text-align:right;}
+  header .user button{
+    margin-top:3px; background:rgba(255,255,255,.2); border:none; color:#fff;
+    font-size:11px; padding:3px 8px; border-radius:10px;
+  }
+
+  /* ===== ログイン ===== */
+  #login{
+    padding:40px 24px; display:flex; flex-direction:column; gap:18px;
+    min-height:100vh; justify-content:center;
+  }
+  #login .logo{text-align:center; margin-bottom:6px;}
+  #login .logo .mark{font-size:40px;}
+  #login .logo h1{font-size:20px; margin:6px 0 2px; color:var(--green-d);}
+  #login .logo p{font-size:12px; color:var(--sub); margin:0;}
+  .field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:var(--green-d);}
+  .field select, .field input{
+    width:100%; padding:14px; font-size:16px; border:1.5px solid var(--line);
+    border-radius:12px; background:#fff;
+  }
+  .btn-main{
+    width:100%; padding:15px; font-size:16px; font-weight:700; color:#fff;
+    background:var(--green); border:none; border-radius:12px; box-shadow:var(--shadow);
+  }
+  .btn-main:active{background:var(--green-d);}
+  .login-msg{font-size:13px; color:#c62828; text-align:center; min-height:18px;}
+
+  /* 名前ボタン */
+  .name-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .name-grid button{
+    padding:13px 4px; font-size:15px; font-weight:600; border:1.5px solid var(--line);
+    background:#fff; border-radius:12px; color:var(--text);
+  }
+  .name-grid button.sel{background:var(--green); color:#fff; border-color:var(--green);}
+  /* PIN表示＋キーパッド */
+  .pin-dots{display:flex; gap:12px; justify-content:center; margin:4px 0 2px;}
+  .pin-dots .dot{width:16px; height:16px; border-radius:50%; border:2px solid var(--green); background:#fff;}
+  .pin-dots .dot.on{background:var(--green);}
+  .keypad{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+  .keypad button{
+    padding:16px 0; font-size:22px; font-weight:700; border:1.5px solid var(--line);
+    background:#fff; border-radius:14px; color:var(--text);
+  }
+  .keypad button:active{background:var(--green-l);}
+  .keypad button.act{font-size:14px; color:var(--green-d);}
+  .back-link{display:block; width:100%; margin-top:14px; background:none; border:none;
+    color:var(--sub); font-size:13px; padding:6px;}
+  /* あいさつアニメーション */
+  .greet{min-height:60vh; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:6px; text-align:center;}
+  .greet-name{font-size:28px; font-weight:800; color:var(--green-d);
+    opacity:0; transform:translateY(12px); animation:greetUp .8s ease forwards;}
+  .greet-sub{font-size:16px; color:var(--sub);
+    opacity:0; transform:translateY(12px); animation:greetUp .8s ease .35s forwards;}
+  @keyframes greetUp{to{opacity:1; transform:translateY(0);}}
+
+  /* ===== メニュー（チャット風） ===== */
+  #app{padding:16px 14px 90px;}
+  .bot-row{display:flex; gap:10px; align-items:flex-start; margin-bottom:14px;}
+  .bot-ava{
+    flex:0 0 38px; height:38px; width:38px; border-radius:50%;
+    background:var(--green-l); display:flex; align-items:center; justify-content:center; font-size:20px;
+  }
+  .bot-bubble{
+    background:var(--card); border:1px solid var(--line); border-radius:4px 16px 16px 16px;
+    padding:12px 14px; font-size:14px; box-shadow:var(--shadow); max-width:85%;
+  }
+  .bot-bubble b{color:var(--green-d);}
+
+  .menu-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;}
+  .menu-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px 12px; text-align:left; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:6px; min-height:84px; cursor:pointer;
+  }
+  .menu-card:active{transform:scale(.97);}
+  .menu-card .ico{font-size:26px;}
+  .menu-card .lbl{font-size:13px; font-weight:700; line-height:1.35;}
+  .menu-card .desc{font-size:11px; color:var(--sub); line-height:1.3;}
+  .menu-card.full{grid-column:1 / -1; flex-direction:row; align-items:center; min-height:auto;}
+  .menu-card.full .ico{font-size:22px;}
+  /* お知らせ用 大カード（2枠分） */
+  .menu-card.big{
+    grid-column:1 / -1; background:var(--blue); color:#fff; border-color:var(--blue);
+    flex-direction:row; align-items:center; gap:14px; min-height:96px; padding:18px 16px;
+  }
+  .menu-card.big .ico{font-size:40px;}
+  .menu-card.big .lbl{font-size:17px;}
+  .menu-card.big .desc{color:rgba(255,255,255,.85);}
+  .menu-card.big .txt{display:flex; flex-direction:column; gap:4px;}
+
+  /* 準備中バッジ */
+  .prep-badge{
+    display:inline-block; background:#9e9e9e; color:#fff; font-size:10px; font-weight:700;
+    border-radius:10px; padding:1px 7px; margin-left:6px; vertical-align:middle;
+  }
+  .menu-card.prep, .sub-list .row.prep{opacity:.7;}
+
+  /* 戻るボタン */
+  .back-btn{
+    display:inline-flex; align-items:center; gap:4px; background:#fff; border:1px solid var(--blue);
+    color:var(--blue-d); font-size:13px; font-weight:600; padding:8px 14px; border-radius:20px;
+    margin-bottom:14px; box-shadow:var(--shadow);
+  }
+  .back-btn:active{background:var(--blue-l);}
+
+  /* ご要望フォーム */
+  .fb-form textarea{
+    width:100%; min-height:130px; padding:14px; font-size:15px; border:1.5px solid var(--line);
+    border-radius:12px; resize:vertical; font-family:inherit;
+  }
+  .fb-form .name-note{font-size:12px; color:var(--sub); margin:8px 0 12px;}
+  .toast{
+    position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+    background:#323232; color:#fff; font-size:13px; padding:10px 18px; border-radius:22px;
+    z-index:60; box-shadow:var(--shadow); animation:fade .3s ease;
+  }
+  @keyframes fade{from{opacity:0;}to{opacity:1;}}
+
+  /* ===== お知らせバッジ ===== */
+  .news-badge{
+    display:inline-block; background:#e53935; color:#fff; font-size:10px; font-weight:700;
+    border-radius:10px; padding:1px 7px; margin-left:6px; vertical-align:middle;
+  }
+
+  /* ===== ポップアップ（お知らせ） ===== */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .sheet{
+    background:#fff; width:100%; max-width:540px; border-radius:20px 20px 0 0;
+    max-height:88vh; display:flex; flex-direction:column; animation:slideUp .25s ease;
+  }
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .sheet-head{
+    padding:16px 18px 10px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:#fff; border-radius:20px 20px 0 0;
+  }
+  .sheet-head h2{font-size:16px; margin:0; color:var(--green-d);}
+  .sheet-head .close{font-size:24px; border:none; background:none; color:var(--sub); line-height:1;}
+  .sheet-body{padding:14px 18px 24px; overflow-y:auto;}
+
+  .news-item{
+    border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px; background:var(--pop);
+    border-color:var(--pop-line);
+  }
+  .news-item.read{background:#fafafa; border-color:var(--line);}
+  .news-item .cat{display:inline-block; font-size:10px; font-weight:700; color:#fff; background:var(--green); border-radius:8px; padding:2px 8px; margin-right:6px;}
+  .news-item .date{font-size:11px; color:var(--sub);}
+  .news-item h3{font-size:15px; margin:8px 0 6px;}
+  .news-item .body{font-size:13px; color:#333; white-space:pre-wrap;}
+  .news-item img{max-width:100%; border-radius:10px; margin-top:8px;}
+  .news-item .read-btn{
+    margin-top:12px; width:100%; padding:11px; font-size:14px; font-weight:700;
+    border:1.5px solid var(--green); background:#fff; color:var(--green); border-radius:10px;
+  }
+  .news-item .read-btn.done{background:var(--green); color:#fff; border-color:var(--green);}
+  .news-item .readers{font-size:11px; color:var(--sub); margin-top:8px;}
+
+  /* ===== 汎用サブ画面 ===== */
+  .sub-list a, .sub-list .row{
+    display:flex; align-items:center; gap:12px; padding:14px;
+    background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:10px;
+    text-decoration:none; color:var(--text); font-size:14px; box-shadow:var(--shadow);
+  }
+  .sub-list .ico{font-size:22px;}
+  .sub-list .arrow{margin-left:auto; color:var(--sub);}
+  .note{font-size:12px; color:var(--sub); background:#fff; border:1px dashed var(--line); border-radius:10px; padding:10px 12px; margin-bottom:12px;}
+
+  /* ===== 下部ナビ ===== */
+  .tabbar{
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:540px; background:#fff; border-top:1px solid var(--line);
+    display:flex; z-index:30;
+  }
+  .tabbar button{
+    flex:1; border:none; background:none; padding:9px 0 7px; font-size:10px; color:var(--sub);
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .tabbar button .ti{font-size:20px;}
+  .tabbar button.active{color:var(--green);}
+</style>
+</head>
+<body>
+
+<!-- ===================== ログイン画面（JSで描画） ===================== -->
+<section id="login"></section>
+
+<!-- ===================== アプリ本体 ===================== -->
+<div id="main" class="hidden">
+  <header>
+    <div class="title">carpe diem<small>社員ポータル</small></div>
+    <div class="user">
+      <span id="hd-name">―</span>
+      <br><button onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <div id="app"></div>
+
+  <nav class="tabbar">
+    <button id="tab-home" class="active" onclick="go('home')"><span class="ti">🏠</span>ホーム</button>
+    <button id="tab-news" onclick="openNews()"><span class="ti">📢</span>お知らせ</button>
+    <button id="tab-manual" onclick="go('manual')"><span class="ti">📋</span>マニュアル</button>
+    <button id="tab-apply" onclick="go('apply')"><span class="ti">📝</span>申請</button>
+  </nav>
+</div>
+
+<!-- ===================== お知らせポップ ===================== -->
+<div id="news-overlay" class="overlay hidden" onclick="if(event.target===this)closeNews()">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>📢 お知らせ</h2>
+      <button class="close" onclick="closeNews()">×</button>
+    </div>
+    <div class="sheet-body" id="news-body"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ▼▼▼ 設定エリア（あとでNotion/GAS接続する箇所） ▼▼▼
+   ============================================================
+   ・GAS_URL … ポータル用に新規作成するGASウェブアプリのURLを入れる
+   ・USE_SAMPLE … true の間はサンプルデータで動作（接続前のテスト用）
+                  GAS接続が済んだら false にする
+   ============================================================ */
+const GAS_URL = "https://script.google.com/macros/s/AKfycby2Op3WbjJbIiCTJGCWcpxxkQYw9Bu5rRL503cqU60Le6GQzlglSdt9qGy5a8dmrlVPXg/exec";
+const USE_SAMPLE = false;
+
+/* ============================================================
+   サンプルデータ（接続前の見た目確認用）
+   本番では従業員DB・お知らせDBから取得します
+   ============================================================ */
+const SAMPLE_NEWS = [
+  {
+    id:"n1", cat:"総務", date:"2026-06-08", title:"6月の安全大会について",
+    body:"6月20日(金) 15:00より、本社2Fにて安全大会を実施します。\n全員参加でお願いします。欠席の場合は事務まで連絡してください。",
+    img:"", readers:["荒瀬","田島"]
+  },
+  {
+    id:"n2", cat:"旅費・経費", date:"2026-06-05", title:"旅費精算の締め日変更",
+    body:"今月から旅費精算の締め日が「毎月25日」に変更になりました。\nアプリの旅費入力もこの日までにお願いします。",
+    img:"", readers:["伊豆"]
+  },
+  {
+    id:"n3", cat:"ツール", date:"2026-06-01", title:"新ポータルアプリ 試験運用スタート",
+    body:"この社員ポータルアプリの試験運用を始めました。\nお知らせの確認・各ツールへの入口として使ってください。",
+    img:"", readers:[]
+  },
+  {
+    id:"n4", cat:"アップデート", date:"2026-06-09", title:"ポータルサイト v1.1 に更新しました",
+    body:"社内ポータルサイトをバージョンアップしました。\n・各カテゴリの項目を整理\n・お知らせに未読者表示を追加\nご要望はメニューの「アプリへのご要望」から送れます。",
+    img:"", readers:[]
+  }
+];
+
+/* ============================================================
+   メニュー定義（マインドマップ準拠）
+   url … 外部ツール/Notionページへのリンク（後で実URLを入れる）
+   action … アプリ内動作（お知らせ・申請など）
+   ============================================================ */
+const MENU = [
+  {ico:"📢", lbl:"お知らせを見る", desc:"最新のお知らせ・サイト更新情報", action:"news", news:true, big:true},
+  {ico:"📋", lbl:"マニュアルを確認する", desc:"業務マニュアル一覧", cat:"manual"},
+  {ico:"📝", lbl:"報告書作成を行う", desc:"報告書の作成・ツール", cat:"report"},
+  {ico:"🛠️", lbl:"アプリ・ツールを使う", desc:"業務ツールと使い方", cat:"tools"},
+  {ico:"📄", lbl:"テンプレートを探す", desc:"書式・ひな形", cat:"template"},
+  {ico:"🎓", lbl:"研修資料を確認する", desc:"研修・教育", cat:"training"},
+  {ico:"📅", lbl:"月次ルーティン", desc:"毎月の定期作業一覧", url:"https://app.notion.com/p/37553633cb208129b126e85486741a52"},
+  {ico:"🏢", lbl:"会社情報を確認する", desc:"会社概要・社内規定", cat:"company"},
+  {ico:"🤝", lbl:"外部パートナー企業情報", desc:"取引先・協業先", cat:"partner"},
+  {ico:"📊", lbl:"営業活動に関する情報", desc:"営業リスト・状況", cat:"sales"},
+  {ico:"🧾", lbl:"申請を行う", desc:"経費・旅費の申請", cat:"apply"},
+  {ico:"👤", lbl:"人事登録の新規・変更申請", desc:"登録情報の申請", cat:"hr"},
+  {ico:"💬", lbl:"アプリへのご要望", desc:"改善要望を送る", action:"feedback"}
+];
+
+/* ============================================================
+   カテゴリ別サブ項目（マインドマップ準拠）
+   url … 各ツール/Notionページのリンク（後で実URLを設定。空なら「準備中」）
+   ============================================================ */
+const CATEGORIES = {
+  manual: { title:"マニュアルを確認する", ico:"📋", items:[
+    {ico:"📱", lbl:"アプリ・ツールの使い方を見る", url:"https://app.notion.com/p/34553633cb2081c2a412e36c44372f08"},
+    {ico:"🏗️", lbl:"現場作業マニュアル", url:""},
+    {ico:"🗂️", lbl:"事務マニュアル", url:""},
+    {ico:"💬", lbl:"社内連絡ツールマニュアル", url:""},
+    {ico:"🤝", lbl:"コミュニケーションマニュアル", url:""}
+  ]},
+  report: { title:"報告書作成を行う", ico:"📝", items:[
+    {ico:"📄", lbl:"テンプレートで選ぶ", url:""},
+    {ico:"🏢", lbl:"企業（元請け）で選ぶ", url:""},
+    {ico:"🧰", lbl:"報告書作成ツール①（写真選択）", url:""},
+    {ico:"🧰", lbl:"報告書作成ツール②（資料作成）", url:""},
+    {ico:"🧰", lbl:"報告書作成ツール①-A（オフライン写真選択）", url:""},
+    {ico:"📋", lbl:"マニュアルを確認する", url:"https://app.notion.com/p/37a53633cb208153bdf3f5bb2d83c765"}
+  ]},
+  tools: { title:"アプリ・ツールを使う", ico:"🛠️", items:[
+    {ico:"🔧", lbl:"ネットde顧問を使う", url:""},
+    {ico:"💴", lbl:"クラウド経費（経費申請アプリ）を使う", url:""},
+    {ico:"📷", lbl:"蔵衛門アプリを使う", url:""},
+    {ico:"🧰", lbl:"報告書作成ツールを使う", url:""},
+    {ico:"🚗", lbl:"旅費ツールを使う", url:""},
+    {ico:"⏰", lbl:"勤怠入力補助ツールを使う", url:""},
+    {ico:"📖", lbl:"アプリ・ツールの使い方を見る", url:"https://app.notion.com/p/34553633cb2081c2a412e36c44372f08"}
+  ]},
+  template: { title:"テンプレートを探す", ico:"📄", items:[
+    {ico:"📝", lbl:"報告書テンプレート", url:""},
+    {ico:"✉️", lbl:"事務テンプレート（汎用送付状）", url:""},
+    {ico:"✉️", lbl:"事務テンプレート（営業DM送付状）", url:""}
+  ]},
+  training: { title:"研修資料を確認する", ico:"🎓", items:[
+    {ico:"🆕", lbl:"入社時研修", url:"https://app.notion.com/p/2f853633cb20808395bcfb1219d245da"},
+    {ico:"🏗️", lbl:"現場研修", url:""},
+    {ico:"🗂️", lbl:"事務研修", url:""},
+    {ico:"📚", lbl:"その他社内研修", url:""},
+    {ico:"🌐", lbl:"外部研修", url:""}
+  ]},
+  company: { title:"会社情報を確認する", ico:"🏢", items:[
+    {ico:"🏢", lbl:"会社基本情報", url:"https://app.notion.com/p/34553633cb208183b5b9c328647f1b55"},
+    {ico:"📁", lbl:"社内規定", url:""}
+  ]},
+  partner: { title:"外部パートナー企業に関する情報", ico:"🤝", items:[
+    {ico:"🏭", lbl:"取引先企業DB", url:"https://app.notion.com/p/97f46219c54d45c6ae69c49a2392dd39"}
+  ]},
+  sales: { title:"営業活動に関する情報", ico:"📊", items:[
+    {ico:"📋", lbl:"営業リスト", url:""},
+    {ico:"🚫", lbl:"営業NGリスト", url:""},
+    {ico:"📮", lbl:"営業済み（DM）リスト", url:""}
+  ]},
+  apply: { title:"申請を行う", ico:"🧾", items:[
+    {ico:"💴", lbl:"経費申請", action:"apply_cost"},
+    {ico:"🚗", lbl:"旅費申請", action:"apply_travel"}
+  ]},
+  hr: { title:"人事登録情報の新規・変更申請", ico:"👤", items:[
+    {ico:"➕", lbl:"人事登録情報を新規登録する", action:"hr_new"},
+    {ico:"✏️", lbl:"人事登録情報を変更する", action:"hr_change"}
+  ]}
+};
+
+/* ============================================================
+   状態
+   ============================================================ */
+let currentUser = "";
+const SESSION_DAYS = 7;                 // 最終ログインから何日ログイン保持するか
+const SESSION_MS   = SESSION_DAYS * 24 * 60 * 60 * 1000;
+
+/* ============================================================
+   ログイン（電話番号＋4桁PIN方式）
+   ・初回：電話番号→名前→「◯◯さん お疲れ様です」→4桁設定→確認入力
+   ・2回目以降：電話番号→4桁入力だけ
+   ・最終ログインから1週間はログイン保持
+   ============================================================ */
+let loginState = "phone";   // phone / name / greet / setpin / confirmpin / login
+let inputPhone = "";        // 入力された電話番号
+let inputName  = "";        // 初回に入力された名前（表示用）
+let foundName  = "";        // GASが返した在籍者名
+let pinBuf     = "";        // キーパッドの入力中4桁
+let setupPin1  = "";        // 初回設定の1回目の4桁
+
+/* 数字だけにそろえる（ハイフン・空白を無視して照合） */
+function normPhone(s){ return (s||"").replace(/[^0-9]/g,""); }
+
+function init(){
+  // ログイン保持セッションの確認
+  const sess = loadSession();
+  if(sess && (Date.now() - sess.ts) < SESSION_MS){
+    currentUser = sess.name;
+    inputPhone  = sess.phone || "";
+    enterApp();
+    verifySession(sess.phone);   // 退職などで無効になっていないか裏で確認
+    return;
+  }
+  // セッション切れでも電話番号が分かっていれば、いきなりPIN入力から
+  if(sess && sess.phone){
+    inputPhone = sess.phone;
+    foundName  = sess.name || "";
+    loginState = "login";
+  } else {
+    loginState = "phone";
+  }
+  renderLogin();
+}
+
+/* ---- セッション保存・読込 ---- */
+function loadSession(){
+  try { return JSON.parse(localStorage.getItem("carpe_session") || "null"); }
+  catch(e){ return null; }
+}
+function saveSession(){
+  localStorage.setItem("carpe_session", JSON.stringify({ phone:inputPhone, name:currentUser, ts:Date.now() }));
+}
+
+/* ============================================================
+   ログイン画面の描画（状態ごとに中身を差し替え）
+   ============================================================ */
+function loginShell(inner){
+  return `
+    <div class="logo">
+      <div class="mark">🌱</div>
+      <h1>carpe diem 社員ポータル</h1>
+    </div>
+    ${inner}
+    <div class="login-msg" id="login-msg"></div>
+    <p style="font-size:11px;color:var(--sub);text-align:center;margin:0;">ログインは最終ログインから1週間保持されます</p>`;
+}
+
+function renderLogin(){
+  const el = document.getElementById("login");
+  if(loginState === "phone"){
+    el.innerHTML = loginShell(`
+      <div class="field">
+        <label>携帯電話番号を入力してください</label>
+        <input id="phone-input" type="tel" inputmode="numeric" autocomplete="tel"
+               placeholder="例：09012345678" value="${esc(inputPhone)}">
+      </div>
+      <button class="btn-main" onclick="submitPhone()">次へ</button>`);
+    setTimeout(()=>{ const i=document.getElementById("phone-input"); if(i) i.focus(); }, 50);
+  }
+  else if(loginState === "name"){
+    el.innerHTML = loginShell(`
+      <div class="field">
+        <label>お名前（フルネーム）を入力してください</label>
+        <input id="name-input" type="text" autocomplete="name"
+               placeholder="例：山田太郎" value="${esc(inputName)}">
+        <p style="font-size:11px;color:var(--sub);margin:6px 0 0;">姓と名の間は空けても空けなくてもOKです</p>
+      </div>
+      <button class="btn-main" onclick="submitName()">次へ</button>`);
+    setTimeout(()=>{ const i=document.getElementById("name-input"); if(i) i.focus(); }, 50);
+  }
+  else if(loginState === "greet"){
+    el.innerHTML = `<div class="greet"><div class="greet-name">${esc(inputName)} さん</div><div class="greet-sub">お疲れ様です</div></div>`;
+  }
+  else if(loginState === "setpin"){
+    el.innerHTML = loginShell(loginPinBlock("初期ログイン番号を設定してください", "次回からのログインに使う好きな4桁の数字を入力"));
+    renderPinUI();
+  }
+  else if(loginState === "confirmpin"){
+    el.innerHTML = loginShell(loginPinBlock("もう一度入力してください", "確認のため、同じ4桁をもう一度入力"));
+    renderPinUI();
+  }
+  else if(loginState === "login"){
+    el.innerHTML = loginShell(loginPinBlock((foundName||"おかえりなさい")+" さん、お疲れ様です", "4桁の合言葉を入力してください"));
+    renderPinUI();
+  }
+}
+
+function loginPinBlock(title, sub){
+  return `
+    <div class="field">
+      <label>${esc(title)}</label>
+      <p style="font-size:11px;color:var(--sub);margin:0 0 8px;">${esc(sub)}</p>
+      <div class="pin-dots" id="pin-dots"></div>
+      <div class="keypad" id="keypad"></div>
+      ${loginState==="login" || loginState==="setpin"
+        ? `<button class="back-link" onclick="resetLogin()">‹ 電話番号を入れ直す</button>` : ""}
+    </div>`;
+}
+
+function renderPinUI(){
+  pinBuf = "";
+  drawPinDots();
+  const keys = ["1","2","3","4","5","6","7","8","9","⌫","0",""];
+  document.getElementById("keypad").innerHTML = keys.map(k=>{
+    if(k==="⌫") return `<button class="act" onclick="pinDel()">⌫</button>`;
+    if(k==="")  return `<button class="act" style="visibility:hidden"></button>`;
+    return `<button onclick="pinTap('${k}')">${k}</button>`;
+  }).join("");
+}
+function drawPinDots(){
+  const el = document.getElementById("pin-dots");
+  if(!el) return;
+  let h=""; for(let i=0;i<4;i++){ h+=`<div class="dot ${i<pinBuf.length?'on':''}"></div>`; }
+  el.innerHTML = h;
+}
+function pinTap(d){
+  if(pinBuf.length>=4) return;
+  pinBuf += d; drawPinDots();
+  if(pinBuf.length===4){ setTimeout(onPinComplete, 180); }
+}
+function pinDel(){ pinBuf = pinBuf.slice(0,-1); drawPinDots(); }
+
+/* 電話番号入力を最初からやり直す */
+function resetLogin(){
+  pinBuf=""; setupPin1=""; inputName="";
+  loginState="phone"; renderLogin();
+}
+
+/* ---- ① 電話番号を送信して、初回設定 or ログインに振り分け ---- */
+function submitPhone(){
+  const msg = document.getElementById("login-msg");
+  const raw = document.getElementById("phone-input").value;
+  const phone = normPhone(raw);
+  if(phone.length < 10){ msg.textContent = "電話番号を正しく入力してください"; return; }
+  inputPhone = phone;
+  if(!GAS_URL){ loginState="name"; renderLogin(); return; }
+  msg.textContent = "確認中…";
+  fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"check", phone:phone }) })
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.success || !d.exists){
+        msg.textContent = "この番号は登録がありません。事務にご連絡ください。";
+        return;
+      }
+      foundName = d.name || "";
+      if(d.hasPin){ loginState="login"; }   // 設定済み → PIN入力
+      else        { loginState="name"; }    // 初回 → 名前入力へ
+      renderLogin();
+    })
+    .catch(()=>{ msg.textContent="通信エラーです。電波の良い場所で再度お試しください"; });
+}
+
+/* ---- ② 初回：名前入力 → あいさつ → PIN設定へ ---- */
+function submitName(){
+  const msg = document.getElementById("login-msg");
+  const v = document.getElementById("name-input").value.trim();
+  if(!v){ msg.textContent = "お名前を入力してください"; return; }
+  inputName = v;
+  loginState = "greet"; renderLogin();
+  setTimeout(()=>{ loginState="setpin"; renderLogin(); }, 1900);
+}
+
+/* ---- 4桁入力が完了したときの分岐 ---- */
+function onPinComplete(){
+  if(loginState === "setpin"){
+    setupPin1 = pinBuf;
+    loginState = "confirmpin"; renderLogin();
+  }
+  else if(loginState === "confirmpin"){
+    if(pinBuf !== setupPin1){
+      setupPin1=""; loginState="setpin"; renderLogin();
+      setTimeout(()=>{ const m=document.getElementById("login-msg"); if(m) m.textContent="番号が一致しませんでした。もう一度設定してください"; }, 60);
+      return;
+    }
+    doSetup(setupPin1);
+  }
+  else if(loginState === "login"){
+    doLogin(pinBuf);
+  }
+}
+
+/* ---- 初回PINをNotionに登録 ---- */
+function doSetup(pin){
+  const msg = document.getElementById("login-msg");
+  if(!GAS_URL){ finalizeLogin(inputName); return; }
+  msg.textContent = "登録中…";
+  fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"setup", phone:inputPhone, pin:pin }) })
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.success){
+        finalizeLogin(inputName || d.name);
+        toast("ログイン番号を登録しました。次回からこの4桁で入れます");
+      } else if(d.reason === "already"){
+        // すでに設定済みだった → 通常ログインへ
+        foundName = d.name || inputName; loginState="login"; renderLogin();
+        setTimeout(()=>{ const m=document.getElementById("login-msg"); if(m) m.textContent="すでに番号が設定済みです。その4桁を入力してください"; }, 60);
+      } else {
+        msg.textContent = d.message || "登録できませんでした。事務にご連絡ください。";
+        setupPin1=""; loginState="setpin"; renderLogin();
+      }
+    })
+    .catch(()=>{ msg.textContent="通信エラーです。電波の良い場所で再度お試しください"; });
+}
+
+/* ---- 2回目以降のログイン（電話番号＋PIN照合） ---- */
+function doLogin(pin){
+  const msg = document.getElementById("login-msg");
+  if(!GAS_URL){ finalizeLogin(foundName); return; }
+  msg.textContent = "確認中…";
+  fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"login", phone:inputPhone, pin:pin }) })
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.success){
+        finalizeLogin(d.name || foundName);
+      } else {
+        msg.textContent = d.message || "合言葉が違います";
+        pinBuf=""; drawPinDots();
+      }
+    })
+    .catch(()=>{ msg.textContent="通信エラーです。電波の良い場所で再度お試しください"; pinBuf=""; drawPinDots(); });
+}
+
+/* ---- ログイン確定（セッション保存→アプリへ） ---- */
+function finalizeLogin(name){
+  currentUser = name || foundName || inputName;
+  saveSession();
+  enterApp();
+}
+
+/* ---- 退職などでアクセス無効になっていないか裏で確認 ---- */
+function verifySession(phone){
+  if(!GAS_URL || !phone) return;
+  fetch(GAS_URL, { method:"POST", body: JSON.stringify({ action:"check", phone:phone }) })
+    .then(r=>r.json())
+    .then(d=>{ if(d && d.success && d.exists === false){ logout(); } })
+    .catch(()=>{});
+}
+
+function logout(){
+  localStorage.removeItem("carpe_session");
+  currentUser=""; inputPhone=""; inputName=""; foundName=""; pinBuf=""; setupPin1="";
+  document.getElementById("main").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
+  loginState="phone"; renderLogin();
+}
+
+function enterApp(){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("main").classList.remove("hidden");
+  document.getElementById("hd-name").textContent = currentUser + " さん";
+  saveSession();   // 開くたびに最終ログイン時刻を更新（活動中は保持を延長）
+  go('home');
+  // Notionからお知らせを取得し、未読があれば自動ポップ
+  fetchNews(true);
+}
+
+/* ============================================================
+   お知らせ（Notionお知らせDBから取得。既読は端末ごとに保存）
+   ============================================================ */
+let _news = USE_SAMPLE ? SAMPLE_NEWS : [];
+let _readIds = JSON.parse(localStorage.getItem("carpe_read") || "[]");
+
+function getNews(){ return _news; }
+function isRead(id){ return _readIds.includes(id); }
+function unreadCount(){ return getNews().filter(n => !isRead(n.id)).length; }
+
+/* GASからお知らせを非同期取得。autoPop=trueなら未読があれば自動で開く */
+function fetchNews(autoPop){
+  if(!GAS_URL){ refreshNewsBadge(); return; }
+  fetch(GAS_URL + "?action=news")
+    .then(r => r.json())
+    .then(d => {
+      if(d.success && Array.isArray(d.news)){
+        _news = d.news;
+        refreshNewsBadge();
+        if(document.getElementById("app")) go('home');
+        if(autoPop && unreadCount() > 0){ setTimeout(openNews, 400); }
+      }
+    })
+    .catch(()=>{});
+}
+
+function openNews(){
+  renderNews();
+  document.getElementById("news-overlay").classList.remove("hidden");
+}
+function closeNews(){
+  document.getElementById("news-overlay").classList.add("hidden");
+}
+
+function renderNews(){
+  const body = document.getElementById("news-body");
+  const news = getNews();
+  if(news.length === 0){
+    body.innerHTML = `<div style="padding:24px;text-align:center;color:#888">お知らせはまだありません</div>`;
+    return;
+  }
+  body.innerHTML = news.map(n=>{
+    const read = isRead(n.id);
+    return `
+      <div class="news-item ${read?'read':''}">
+        <div><span class="cat">${esc(n.cat)}</span><span class="date">${esc(n.date)}</span></div>
+        <h3>${esc(n.title)}</h3>
+        <div class="body">${esc(n.body)}</div>
+        ${n.img?`<img src="${esc(n.img)}" alt="">`:""}
+        <button class="read-btn ${read?'done':''}" onclick="markRead('${n.id}')" ${read?'disabled':''}>
+          ${read?'✓ 確認済み':'読みました 👀'}
+        </button>
+      </div>`;
+  }).join("");
+}
+
+function markRead(id){
+  if(isRead(id)) return;
+  _readIds.push(id);
+  localStorage.setItem("carpe_read", JSON.stringify(_readIds));
+  renderNews();
+  refreshNewsBadge();
+}
+
+/* ============================================================
+   画面遷移（ホーム / マニュアル / 申請 など）
+   ============================================================ */
+const FORM_SCREENS = ['apply_cost','apply_travel','hr_new','hr_change'];
+
+function go(screen){
+  setTab(screen);
+  const app = document.getElementById("app");
+  if(screen==='home')              app.innerHTML = viewHome();
+  else if(screen==='feedback')     app.innerHTML = viewFeedback();
+  else if(screen==='apply_cost')   app.innerHTML = viewApplyCost();
+  else if(screen==='apply_travel') app.innerHTML = viewApplyTravel();
+  else if(screen==='hr_new')       app.innerHTML = viewHrNew();
+  else if(screen==='hr_change')    app.innerHTML = viewHrChange();
+  else if(CATEGORIES[screen])      app.innerHTML = viewCategory(screen);
+  window.scrollTo(0,0);
+}
+
+function backToCat(cat){
+  return `<button class="back-btn" onclick="go('${cat}')">‹ 戻る</button>`;
+}
+
+function backBtn(){
+  return `<button class="back-btn" onclick="go('home')">‹ ホームに戻る</button>`;
+}
+
+function setTab(screen){
+  document.querySelectorAll(".tabbar button").forEach(b=>b.classList.remove("active"));
+  const map={home:"tab-home",manual:"tab-manual",apply:"tab-apply"};
+  if(map[screen]) document.getElementById(map[screen]).classList.add("active");
+}
+
+function viewHome(){
+  const badge = unreadCount()>0 ? `<span class="news-badge">未読 ${unreadCount()}</span>` : "";
+  const cards = MENU.map(m=>{
+    const b = m.news && unreadCount()>0 ? `<span class="news-badge">${unreadCount()}</span>` : "";
+    const prep = (!m.action && !m.url && !m.cat) ? `<span class="prep-badge">準備中</span>` : "";
+    const cls = "menu-card" + (m.big?" big":"") + ((!m.action && !m.url && !m.cat)?" prep":"");
+    if(m.big){
+      return `<div class="${cls}" onclick="menuTap(${JSON.stringify(m).replace(/"/g,'&quot;')})">
+        <div class="ico">${m.ico}</div>
+        <div class="txt"><div class="lbl">${esc(m.lbl)}${b}</div><div class="desc">${esc(m.desc)}</div></div>
+      </div>`;
+    }
+    return `<div class="${cls}" onclick="menuTap(${JSON.stringify(m).replace(/"/g,'&quot;')})">
+      <div class="ico">${m.ico}</div>
+      <div class="lbl">${esc(m.lbl)}${b}${prep}</div>
+      <div class="desc">${esc(m.desc)}</div>
+    </div>`;
+  }).join("");
+  return `
+    <div class="bot-row">
+      <div class="bot-ava">🌱</div>
+      <div class="bot-bubble">
+        <b>${esc(currentUser)}さん、おつかれさまです！</b><br>
+        やりたいことを選んでください。${badge}
+      </div>
+    </div>
+    <div class="menu-grid">${cards}</div>
+  `;
+}
+
+function menuTap(m){
+  if(m.action==='news'){ openNews(); return; }
+  if(m.action==='feedback'){ go('feedback'); return; }
+  if(m.cat){ go(m.cat); return; }
+  if(m.url){ window.open(m.url, "_blank"); return; }
+  toast("準備中です");
+}
+
+/* リンク行を共通描画（url/action/空で挙動分岐） */
+function linkRow(item){
+  if(item.action){
+    return `<div class="row" onclick="go('${item.action}')">
+      <span class="ico">${item.ico}</span>${esc(item.lbl)}<span class="arrow">›</span></div>`;
+  }
+  const prep  = item.url ? "" : `<span class="prep-badge">準備中</span>`;
+  const cls   = item.url ? "row" : "row prep";
+  const arrow = item.url ? `<span class="arrow">›</span>` : "";
+  return `<div class="${cls}" onclick="openTool('${esc(item.url||'')}')">
+    <span class="ico">${item.ico}</span>${esc(item.lbl)}${prep}${arrow}</div>`;
+}
+
+function viewCategory(key){
+  const c = CATEGORIES[key];
+  return `${backBtn()}
+    <div class="bot-row"><div class="bot-ava">${c.ico}</div>
+      <div class="bot-bubble"><b>${esc(c.title)}</b><br>項目を選んでください。</div></div>
+    <div class="sub-list">${c.items.map(linkRow).join("")}</div>`;
+}
+
+function viewFeedback(){
+  return `${backBtn()}
+    <div class="bot-row"><div class="bot-ava">💬</div>
+      <div class="bot-bubble"><b>アプリへのご要望</b><br>「こうだったら使いやすい」など、気づいたことを送ってください。</div></div>
+    <div class="fb-form">
+      <textarea id="fb-text" placeholder="例）お知らせに添付ファイルも付けられると嬉しいです"></textarea>
+      <div class="name-note">送信者：${esc(currentUser)} さん</div>
+      <button class="btn-main" onclick="sendFeedback()">送信する</button>
+    </div>`;
+}
+
+function sendFeedback(){
+  const t = document.getElementById("fb-text");
+  const msg = t.value.trim();
+  if(!msg){ toast("内容を入力してください"); return; }
+  if(GAS_URL){
+    fetch(GAS_URL, {
+      method:"POST",
+      body: JSON.stringify({ action:"feedback", user:currentUser, message:msg })
+    }).catch(()=>{});
+  }
+  t.value="";
+  toast("送信しました。ありがとうございます！");
+}
+
+function openTool(url){
+  if(url){ window.open(url,"_blank"); } else { toast("準備中です"); }
+}
+
+/* ============================================================
+   経費申請フォーム
+   ============================================================ */
+function viewApplyCost(){
+  const today = new Date().toISOString().slice(0,10);
+  return `${backToCat('apply')}
+    <div class="bot-row"><div class="bot-ava">💴</div>
+      <div class="bot-bubble"><b>経費申請</b><br>内容を入力して送信してください。事務が確認します。</div></div>
+    <div class="fb-form">
+      <label class="form-label">申請日</label>
+      <input id="ac-date" type="date" value="${today}">
+      <label class="form-label">金額（円）</label>
+      <input id="ac-amount" type="number" placeholder="例）3500" inputmode="numeric">
+      <label class="form-label">費目</label>
+      <select id="ac-cat">
+        <option value="">選択してください</option>
+        <option>交通費</option><option>駐車場代</option><option>高速代</option>
+        <option>消耗品・備品</option><option>接待・会議費</option><option>通信費</option><option>その他</option>
+      </select>
+      <label class="form-label">内容・メモ</label>
+      <textarea id="ac-note" placeholder="例）現場訪問のための高速代（宮崎IC〜都城IC）"></textarea>
+      <div class="name-note">申請者：${esc(currentUser)} さん</div>
+      <button class="btn-main" onclick="submitApplyCost()">申請を送信する</button>
+    </div>`;
+}
+function submitApplyCost(){
+  const date   = document.getElementById("ac-date").value;
+  const amount = document.getElementById("ac-amount").value.trim();
+  const cat    = document.getElementById("ac-cat").value;
+  const note   = document.getElementById("ac-note").value.trim();
+  if(!date||!amount||!cat){ toast("日付・金額・費目を入力してください"); return; }
+  const body = `【経費申請】\n申請者：${currentUser}\n日付：${date}\n金額：${amount}円\n費目：${cat}\n内容：${note||"（なし）"}`;
+  sendApply("apply_cost", body);
+  toast("申請を送信しました！");
+  go('apply');
+}
+
+/* ============================================================
+   旅費申請フォーム
+   ============================================================ */
+function viewApplyTravel(){
+  const today = new Date().toISOString().slice(0,10);
+  return `${backToCat('apply')}
+    <div class="bot-row"><div class="bot-ava">🚗</div>
+      <div class="bot-bubble"><b>旅費申請</b><br>内容を入力して送信してください。事務が確認します。</div></div>
+    <div class="fb-form">
+      <label class="form-label">出発日</label>
+      <input id="at-date" type="date" value="${today}">
+      <label class="form-label">目的地（現場名など）</label>
+      <input id="at-dest" type="text" placeholder="例）都城市〇〇邸">
+      <label class="form-label">移動手段</label>
+      <select id="at-type">
+        <option value="">選択してください</option>
+        <option>自家用車</option><option>社用車</option><option>電車・バス</option>
+        <option>タクシー</option><option>飛行機</option><option>その他</option>
+      </select>
+      <label class="form-label">交通費合計（円）</label>
+      <input id="at-amount" type="number" placeholder="例）2800" inputmode="numeric">
+      <label class="form-label">備考</label>
+      <textarea id="at-note" placeholder="例）往復。駐車場代含む。"></textarea>
+      <div class="name-note">申請者：${esc(currentUser)} さん</div>
+      <button class="btn-main" onclick="submitApplyTravel()">申請を送信する</button>
+    </div>`;
+}
+function submitApplyTravel(){
+  const date   = document.getElementById("at-date").value;
+  const dest   = document.getElementById("at-dest").value.trim();
+  const type   = document.getElementById("at-type").value;
+  const amount = document.getElementById("at-amount").value.trim();
+  const note   = document.getElementById("at-note").value.trim();
+  if(!date||!dest||!type||!amount){ toast("日付・目的地・移動手段・交通費を入力してください"); return; }
+  const body = `【旅費申請】\n申請者：${currentUser}\n出発日：${date}\n目的地：${dest}\n移動手段：${type}\n交通費：${amount}円\n備考：${note||"（なし）"}`;
+  sendApply("apply_travel", body);
+  toast("申請を送信しました！");
+  go('apply');
+}
+
+/* ============================================================
+   人事登録 新規登録フォーム
+   ============================================================ */
+function viewHrNew(){
+  return `${backToCat('hr')}
+    <div class="bot-row"><div class="bot-ava">➕</div>
+      <div class="bot-bubble"><b>人事登録情報 新規登録申請</b><br>入社する方の情報を入力してください。事務が登録します。</div></div>
+    <div class="fb-form">
+      <label class="form-label">氏名</label>
+      <input id="hn-name" type="text" placeholder="例）山田 太郎">
+      <label class="form-label">ふりがな</label>
+      <input id="hn-kana" type="text" placeholder="例）やまだ たろう">
+      <label class="form-label">入社予定日</label>
+      <input id="hn-start" type="date">
+      <label class="form-label">連絡先電話番号</label>
+      <input id="hn-tel" type="tel" placeholder="例）090-0000-0000" inputmode="tel">
+      <label class="form-label">メールアドレス</label>
+      <input id="hn-email" type="email" placeholder="例）yamada@example.com" inputmode="email">
+      <label class="form-label">備考・その他</label>
+      <textarea id="hn-note" placeholder="その他連絡事項があれば"></textarea>
+      <div class="name-note">申請者：${esc(currentUser)} さん</div>
+      <button class="btn-main" onclick="submitHrNew()">申請を送信する</button>
+    </div>`;
+}
+function submitHrNew(){
+  const name  = document.getElementById("hn-name").value.trim();
+  const kana  = document.getElementById("hn-kana").value.trim();
+  const start = document.getElementById("hn-start").value;
+  const tel   = document.getElementById("hn-tel").value.trim();
+  const email = document.getElementById("hn-email").value.trim();
+  const note  = document.getElementById("hn-note").value.trim();
+  if(!name||!start||!tel){ toast("氏名・入社日・電話番号を入力してください"); return; }
+  const body = `【人事登録申請（新規）】\n申請者：${currentUser}\n氏名：${name}\nふりがな：${kana}\n入社日：${start}\nTEL：${tel}\nメール：${email||"（なし）"}\n備考：${note||"（なし）"}`;
+  sendApply("hr_new", body);
+  toast("申請を送信しました！");
+  go('hr');
+}
+
+/* ============================================================
+   人事登録 変更申請フォーム
+   ============================================================ */
+function viewHrChange(){
+  return `${backToCat('hr')}
+    <div class="bot-row"><div class="bot-ava">✏️</div>
+      <div class="bot-bubble"><b>人事登録情報 変更申請</b><br>変更したい項目と新しい内容を入力してください。</div></div>
+    <div class="fb-form">
+      <label class="form-label">氏名（対象者）</label>
+      <input id="hc-name" type="text" placeholder="例）山田 太郎">
+      <label class="form-label">変更項目</label>
+      <select id="hc-item">
+        <option value="">選択してください</option>
+        <option>住所</option><option>電話番号</option><option>メールアドレス</option>
+        <option>緊急連絡先</option><option>銀行口座</option><option>その他</option>
+      </select>
+      <label class="form-label">変更後の内容</label>
+      <textarea id="hc-new" placeholder="新しい内容を記入してください"></textarea>
+      <label class="form-label">備考</label>
+      <textarea id="hc-note" placeholder="変更理由など（任意）"></textarea>
+      <div class="name-note">申請者：${esc(currentUser)} さん</div>
+      <button class="btn-main" onclick="submitHrChange()">申請を送信する</button>
+    </div>`;
+}
+function submitHrChange(){
+  const name = document.getElementById("hc-name").value.trim();
+  const item = document.getElementById("hc-item").value;
+  const nval = document.getElementById("hc-new").value.trim();
+  const note = document.getElementById("hc-note").value.trim();
+  if(!name||!item||!nval){ toast("氏名・変更項目・変更後の内容を入力してください"); return; }
+  const body = `【人事登録申請（変更）】\n申請者：${currentUser}\n対象者：${name}\n変更項目：${item}\n変更後：${nval}\n備考：${note||"（なし）"}`;
+  sendApply("hr_change", body);
+  toast("申請を送信しました！");
+  go('hr');
+}
+
+/* 申請系の共通送信（GAS経由でメール） */
+function sendApply(action, bodyText){
+  if(!GAS_URL) return;
+  fetch(GAS_URL, {
+    method:"POST",
+    body: JSON.stringify({ action:"apply", subAction:action, user:currentUser, message:bodyText })
+  }).catch(()=>{});
+}
+
+function toast(text){
+  const old = document.querySelector(".toast"); if(old) old.remove();
+  const el = document.createElement("div");
+  el.className="toast"; el.textContent=text;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 1800);
+}
+
+function refreshNewsBadge(){
+  if(document.getElementById("tab-home").classList.contains("active")){
+    document.getElementById("app").innerHTML = viewHome();
+  }
+}
+
+/* ============================================================
+   ユーティリティ
+   ============================================================ */
+function esc(s){
+  return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+init();
+</script>
+</body>
+</html>

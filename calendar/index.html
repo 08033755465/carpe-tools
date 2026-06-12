@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>2026 Calendar</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #2a2a2a;
+    --ink-light: #6b6b6b;
+    --ink-faint: #b8b8b8;
+    --paper: #ffffff;
+    --line: #e8e6e0;
+    --line-dark: #c8c5bd;
+    --sun: #c1432d;
+    --sun-soft: #e89485;
+    --sat: #2d6cb1;
+    --sat-soft: #88a8d0;
+    --accent: #8a7a5c;
+    --holiday: #c1432d;
+    --anniv: #b89060;
+    --ampm: #c8c5bd;
+  }
+
+  /* ===== Themes — paper stays white, lines change color ===== */
+
+  body[data-theme="charcoal"] {
+    --line: #d5d3ce;
+    --line-dark: #1a1a1a;
+    --accent: #1a1a1a;
+  }
+
+  body[data-theme="forest"] {
+    --line: #c9d8b8;
+    --line-dark: #1f7a3a;
+    --accent: #1f7a3a;
+  }
+
+  body[data-theme="navy"] {
+    --line: #c5cce0;
+    --line-dark: #1a3d8a;
+    --accent: #1a3d8a;
+  }
+
+  body[data-theme="pink"] {
+    --line: #f0c8d6;
+    --line-dark: #d63384;
+    --accent: #d63384;
+  }
+
+  body[data-theme="terracotta"] {
+    --line: #f0c8a8;
+    --line-dark: #d94a1a;
+    --accent: #d94a1a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: #d8d5cc;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--ink);
+  }
+
+  body {
+    padding: 30px 0;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    background: var(--paper);
+    margin: 0 auto 30px;
+    padding: 10mm 14mm 14mm;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    display: grid;
+    grid-template-columns: auto auto auto 1fr;
+    align-items: center;
+    gap: 5mm;
+    padding-bottom: 1.5mm;
+    border-bottom: 1.5px solid var(--line-dark);
+    margin-bottom: 1.5mm;
+  }
+
+  .month-label {
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 3mm;
+  }
+
+  .month-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 38pt;
+    font-weight: 300;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    line-height: 0.85;
+  }
+
+  .month-name {
+    font-family: 'Outfit', sans-serif;
+    font-size: 7.5pt;
+    font-weight: 300;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+  }
+
+  .year-mark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 12pt;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    text-align: center;
+    padding: 0 4mm;
+    border-left: 1px solid var(--line-dark);
+    border-right: 1px solid var(--line-dark);
+    line-height: 1;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ===== Mini calendars (now in header LEFT side) ===== */
+  .mini-cals {
+    display: flex;
+    gap: 5mm;
+    align-items: center;
+  }
+
+  .mini {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .mini-title {
+    font-size: 6.5pt;
+    font-weight: 400;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    margin-bottom: 2px;
+    text-align: center;
+  }
+
+  .mini table {
+    border-collapse: collapse;
+    font-size: 6pt;
+  }
+
+  .mini th, .mini td {
+    width: 11px;
+    height: 10px;
+    text-align: center;
+    font-weight: 300;
+    color: var(--ink-light);
+    padding: 0;
+  }
+
+  .mini th {
+    font-size: 5.5pt;
+    color: var(--ink-faint);
+    padding-bottom: 2px;
+  }
+
+  .mini .sun { color: var(--sun-soft); }
+  .mini .sat { color: var(--sat-soft); }
+  .mini td.holiday { color: var(--sun-soft); }
+
+  /* ===== Header Goal (right side) ===== */
+  .header-goal {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-self: stretch;
+    justify-content: center;
+    min-width: 60mm;
+    padding-left: 3mm;
+  }
+
+  .header-goal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 9pt;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .header-goal-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .header-goal-line {
+    height: 1px;
+    background-image: linear-gradient(to right, var(--accent) 0, var(--accent) 1.5px, transparent 1.5px);
+    background-size: 4px 1px;
+    background-repeat: repeat-x;
+    opacity: 0.5;
+  }
+
+  /* ===== Weekday header ===== */
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 0;
+  }
+
+  .weekday {
+    font-family: 'Outfit', sans-serif;
+    font-size: 8pt;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+    padding: 5px 8px;
+    text-align: left;
+  }
+
+  .weekday.sun { color: var(--sun); }
+  .weekday.sat { color: var(--sat); }
+
+  /* ===== Calendar grid ===== */
+  .grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr;
+    border-top: 1.5px solid var(--line-dark);
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    border-bottom: 1.5px solid var(--line-dark);
+    min-height: 0;
+  }
+
+  .day {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 4px 6px 4px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .day-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16pt;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .day.sun .day-num { color: var(--sun); }
+  .day.sat .day-num { color: var(--sat); }
+  .day.holiday .day-num { color: var(--holiday); }
+  .day.faded .day-num { color: var(--ink-faint); }
+  .day.faded { background: rgba(0,0,0,0.015); }
+
+  .day-header {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    margin-bottom: 2px;
+  }
+
+  .holiday-label {
+    font-size: 5.5pt;
+    color: var(--holiday);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    font-weight: 400;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .anniv-label {
+    font-size: 5.5pt;
+    color: var(--anniv);
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    font-style: italic;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    margin-top: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .todos {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .todo {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    font-size: 7pt;
+    color: var(--ink-light);
+  }
+
+  .todo .box {
+    width: 8px;
+    height: 8px;
+    border: 1px solid var(--line-dark);
+    border-radius: 1px;
+    flex-shrink: 0;
+  }
+
+  .todo .line {
+    flex: 1;
+    height: 1px;
+    margin-bottom: 1px;
+    background-image: linear-gradient(to right, var(--ink-faint) 0, var(--ink-faint) 1px, transparent 1px);
+    background-size: 3px 1px;
+    background-repeat: repeat-x;
+    opacity: 0.6;
+  }
+
+  /* ===== Footer ===== */
+  .footer {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 8mm;
+    padding-top: 4mm;
+    margin-top: 3mm;
+    border-top: 1.5px solid var(--line-dark);
+  }
+
+  .note-section h4 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 6.5pt;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    color: var(--ink-light);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .note-section h4::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line-dark);
+    opacity: 0.5;
+  }
+
+  .memo-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .goal-section {
+    position: relative;
+  }
+
+  .goal-section h4 {
+    color: var(--accent);
+    font-style: italic;
+    letter-spacing: 0.15em;
+    text-transform: none;
+    font-size: 8pt;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+  }
+
+  .goal-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .goal-line {
+    height: 1px;
+    background-image: linear-gradient(to right, var(--accent) 0, var(--accent) 1.5px, transparent 1.5px);
+    background-size: 4px 1px;
+    background-repeat: repeat-x;
+    opacity: 0.45;
+  }
+
+  .memo-grid {
+    flex: 1;
+    min-height: 60px;
+    background-image: radial-gradient(circle, var(--ink-faint) 0.6px, transparent 0.6px);
+    background-size: 8px 8px;
+    background-position: 0 0;
+    opacity: 0.55;
+  }
+
+  .priority-todos {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .priority-todo {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .priority-todo .box {
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--line-dark);
+  }
+
+  .priority-todo .line {
+    flex: 1;
+    height: 1px;
+    margin-bottom: 1px;
+    background-image: linear-gradient(to right, var(--ink-faint) 0, var(--ink-faint) 1.5px, transparent 1.5px);
+    background-size: 4px 1px;
+    background-repeat: repeat-x;
+  }
+
+  /* ===== Print Controls ===== */
+  .controls {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #fafaf7;
+    padding: 14px 18px;
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    font-family: 'Outfit', sans-serif;
+    font-size: 9pt;
+    z-index: 100;
+    max-width: 240px;
+  }
+
+  .controls h3 {
+    font-size: 8pt;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #6b6b6b;
+    margin-bottom: 10px;
+    font-weight: 400;
+  }
+
+  .theme-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .theme-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    padding: 0;
+  }
+
+  .theme-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .theme-btn.active {
+    box-shadow: 0 0 0 2px #2a2a2a;
+    transform: scale(1.1);
+  }
+
+  .theme-name {
+    font-size: 7.5pt;
+    color: #8a7a5c;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    margin-top: 6px;
+  }
+
+  .print-btn {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    background: #2a2a2a;
+    color: #fafaf7;
+    border: none;
+    cursor: pointer;
+    font-family: 'Outfit', sans-serif;
+    font-size: 9pt;
+    letter-spacing: 0.1em;
+    border-radius: 2px;
+    transition: opacity 0.2s;
+  }
+
+  .print-btn:hover { opacity: 0.85; }
+
+  .controls .hint {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 8pt;
+    color: #6b6b6b;
+    line-height: 1.5;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e8e6e0;
+  }
+
+  /* ===== Print ===== */
+  @media print {
+    body { background: white; padding: 0; }
+    .page {
+      margin: 0;
+      box-shadow: none;
+      width: 210mm;
+      height: 297mm;
+    }
+    .controls { display: none; }
+    @page { size: A4 portrait; margin: 0; }
+  }
+</style>
+</head>
+<body data-theme="charcoal">
+
+<div class="controls">
+  <h3>2026 Calendar</h3>
+  <div class="theme-row">
+    <button class="theme-btn" data-theme="charcoal" style="background:#fff;border:2.5px solid #1a1a1a" title="Charcoal"></button>
+    <button class="theme-btn" data-theme="forest" style="background:#fff;border:2.5px solid #1f7a3a" title="Forest"></button>
+    <button class="theme-btn" data-theme="navy" style="background:#fff;border:2.5px solid #1a3d8a" title="Navy"></button>
+    <button class="theme-btn" data-theme="pink" style="background:#fff;border:2.5px solid #d63384" title="Pink"></button>
+    <button class="theme-btn" data-theme="terracotta" style="background:#fff;border:2.5px solid #d94a1a" title="Terracotta"></button>
+  </div>
+  <div class="theme-name" id="themeName">Charcoal</div>
+  <button class="print-btn" onclick="window.print()">印刷 / PDF保存</button>
+  <div class="hint">
+    色を選んで保存すると、プロジェクト別に見分けやすいよ。
+  </div>
+</div>
+
+<div id="calendar"></div>
+
+<script>
+  const monthNames = [
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const monthShort = [
+    '', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'
+  ];
+  const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekdayShort = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  // 2026年の祝日（key = "M-D"）
+  const holidays = {
+    '1-1':   '元日',
+    '1-12':  '成人の日',
+    '2-11':  '建国記念の日',
+    '2-23':  '天皇誕生日',
+    '3-20':  '春分の日',
+    '4-29':  '昭和の日',
+    '5-3':   '憲法記念日',
+    '5-4':   'みどりの日',
+    '5-5':   'こどもの日',
+    '5-6':   '振替休日',
+    '7-20':  '海の日',
+    '8-11':  '山の日',
+    '9-21':  '敬老の日',
+    '9-22':  '国民の休日',
+    '9-23':  '秋分の日',
+    '10-12': 'スポーツの日',
+    '11-3':  '文化の日',
+    '11-23': '勤労感謝の日'
+  };
+
+  // 記念日（赤くしないが、控えめに表示）
+  const anniversaries = {
+    '2-14':  'Valentine',
+    '5-10':  "Mother's Day",
+    '6-21':  "Father's Day",
+    '12-25': 'Christmas'
+  };
+
+  // テーマ切替
+  function setupThemes() {
+    const buttons = document.querySelectorAll('.theme-btn');
+    const themeName = document.getElementById('themeName');
+    const themeNames = {
+      charcoal: 'Charcoal', forest: 'Forest', navy: 'Navy',
+      pink: 'Pink', terracotta: 'Terracotta'
+    };
+    buttons.forEach(btn => {
+      if (btn.dataset.theme === 'charcoal') btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        const theme = btn.dataset.theme;
+        document.body.dataset.theme = theme;
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (themeName) themeName.textContent = themeNames[theme];
+      });
+    });
+  }
+
+  function getDaysInMonth(year, month) {
+    return new Date(year, month, 0).getDate();
+  }
+
+  function getFirstDayOfMonth(year, month) {
+    return new Date(year, month - 1, 1).getDay(); // 0 = Sunday
+  }
+
+  function buildMiniCalendar(year, month) {
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+
+    let html = '<table><thead><tr>';
+    weekdayShort.forEach((d, i) => {
+      const cls = i === 0 ? 'sun' : i === 6 ? 'sat' : '';
+      html += `<th class="${cls}">${d}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    let day = 1;
+    for (let row = 0; row < 6; row++) {
+      html += '<tr>';
+      for (let col = 0; col < 7; col++) {
+        if ((row === 0 && col < firstDay) || day > daysInMonth) {
+          html += '<td></td>';
+        } else {
+          const isHoliday = year === 2026 && holidays[`${month}-${day}`];
+          let cls = col === 0 ? 'sun' : col === 6 ? 'sat' : '';
+          if (isHoliday) cls = 'sun';
+          html += `<td class="${cls}">${day}</td>`;
+          day++;
+        }
+      }
+      html += '</tr>';
+      if (day > daysInMonth) break;
+    }
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function buildMonthPage(year, month) {
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+
+    // Previous month info
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const prevDays = getDaysInMonth(prevYear, prevMonth);
+
+    // Next month info
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear = month === 12 ? year + 1 : year;
+
+    // Build cell array (always 6 weeks = 42 cells, no - we'll do exact)
+    const cells = [];
+
+    // Leading: previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+      cells.push({ day: prevDays - i, faded: true, dow: firstDay - 1 - i });
+    }
+
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = (firstDay + d - 1) % 7;
+      cells.push({ day: d, faded: false, dow: dow });
+    }
+
+    // Trailing: next month days (fill to multiple of 7)
+    while (cells.length % 7 !== 0) {
+      const dow = cells.length % 7;
+      cells.push({ day: cells.length - daysInMonth - firstDay + 1, faded: true, dow: dow });
+    }
+
+    let cellsHtml = '';
+    cells.forEach(cell => {
+      const dowClass = cell.dow === 0 ? 'sun' : cell.dow === 6 ? 'sat' : '';
+      const fadedClass = cell.faded ? 'faded' : '';
+
+      // 祝日・記念日チェック（当月のみ）
+      let holidayLabel = '';
+      let annivLabel = '';
+      let holidayClass = '';
+      if (!cell.faded) {
+        const key = `${month}-${cell.day}`;
+        if (holidays[key]) {
+          holidayLabel = `<div class="holiday-label">${holidays[key]}</div>`;
+          holidayClass = 'holiday';
+        } else if (anniversaries[key]) {
+          annivLabel = `<div class="anniv-label">${anniversaries[key]}</div>`;
+        }
+      }
+
+      const labelHtml = holidayLabel || annivLabel;
+
+      const todosHtml = cell.faded ? '' : `
+        <div class="todos">
+          <div class="todo"><span class="box"></span><span class="line"></span></div>
+          <div class="todo"><span class="box"></span><span class="line"></span></div>
+        </div>
+      `;
+      cellsHtml += `
+        <div class="day ${dowClass} ${fadedClass} ${holidayClass}">
+          <div class="day-header">
+            <div class="day-num">${cell.day}</div>
+            ${labelHtml}
+          </div>
+          ${todosHtml}
+        </div>
+      `;
+    });
+
+    let weekdaysHtml = '';
+    weekdayNames.forEach((wd, i) => {
+      const cls = i === 0 ? 'sun' : i === 6 ? 'sat' : '';
+      weekdaysHtml += `<div class="weekday ${cls}">${wd}</div>`;
+    });
+
+    const headerGoalLines = Array(3).fill('<div class="header-goal-line"></div>').join('');
+    const priorityTodos = Array(7).fill(
+      '<div class="priority-todo"><span class="box"></span><span class="line"></span></div>'
+    ).join('');
+
+    return `
+      <div class="page">
+        <div class="header">
+          <div class="month-label">
+            <div class="month-num">${String(month).padStart(2, '0')}</div>
+            <div class="month-name">${monthNames[month]}</div>
+          </div>
+          <div class="year-mark">
+            ${year}
+          </div>
+          <div class="mini-cals">
+            <div class="mini">
+              <div class="mini-title">${monthShort[prevMonth]}</div>
+              ${buildMiniCalendar(prevYear, prevMonth)}
+            </div>
+            <div class="mini">
+              <div class="mini-title">${monthShort[nextMonth]}</div>
+              ${buildMiniCalendar(nextYear, nextMonth)}
+            </div>
+          </div>
+          <div class="header-goal">
+            <div class="header-goal-title">This Month's Goal</div>
+            <div class="header-goal-lines">${headerGoalLines}</div>
+          </div>
+        </div>
+
+        <div class="weekdays">${weekdaysHtml}</div>
+        <div class="grid">${cellsHtml}</div>
+
+        <div class="footer">
+          <div class="note-section">
+            <h4>Priority</h4>
+            <div class="priority-todos">${priorityTodos}</div>
+          </div>
+          <div class="note-section memo-section">
+            <h4>Memo</h4>
+            <div class="memo-grid"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  let html = '';
+  for (let m = 1; m <= 12; m++) {
+    html += buildMonthPage(2026, m);
+  }
+  document.getElementById('calendar').innerHTML = html;
+  setupThemes();
+</script>
+
+</body>
+</html>

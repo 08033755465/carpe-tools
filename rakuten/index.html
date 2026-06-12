@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#bf0000">
+<title>在庫・購入管理</title>
+<style>
+  :root{
+    --rakuten:#bf0000;
+    --rakuten-d:#9a0000;
+    --bg:#f4f5f7;
+    --card:#ffffff;
+    --line:#e6e8ec;
+    --txt:#1f2329;
+    --sub:#6b7280;
+    --ok:#137a3f;
+    --warn:#c47f00;
+    --danger:#d32f2f;
+    --accent:#0a6ebd;
+    --radius:14px;
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+    background:var(--bg);color:var(--txt);
+    font-size:15px;line-height:1.5;
+    padding-bottom:calc(72px + var(--safe-b));
+    -webkit-text-size-adjust:100%;
+  }
+  /* ---------- Header ---------- */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:linear-gradient(135deg,var(--rakuten),var(--rakuten-d));
+    color:#fff;padding:14px 16px;padding-top:max(14px,env(safe-area-inset-top));
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+  }
+  header h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:8px;}
+  header .sub{font-size:11px;opacity:.85;margin-top:2px;}
+  /* ---------- Tabs ---------- */
+  nav.tabbar{
+    position:fixed;bottom:0;left:0;right:0;z-index:50;
+    display:flex;background:#fff;border-top:1px solid var(--line);
+    padding-bottom:var(--safe-b);
+    box-shadow:0 -2px 10px rgba(0,0,0,.06);
+  }
+  nav.tabbar button{
+    flex:1;border:0;background:none;padding:8px 2px 6px;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    color:var(--sub);font-size:10.5px;font-weight:600;cursor:pointer;
+    position:relative;
+  }
+  nav.tabbar button .ic{font-size:21px;line-height:1;}
+  nav.tabbar button.active{color:var(--rakuten);}
+  nav.tabbar button .badge{
+    position:absolute;top:2px;right:50%;transform:translateX(20px);
+    background:var(--rakuten);color:#fff;font-size:9px;font-weight:700;
+    min-width:16px;height:16px;border-radius:8px;padding:0 4px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  /* ---------- Layout ---------- */
+  main{padding:12px 12px 4px;max-width:680px;margin:0 auto;}
+  .view{display:none;}
+  .view.active{display:block;animation:fade .2s;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:10px;}
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+  .seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .seg button{border:0;background:none;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--sub);cursor:pointer;}
+  .seg button.on{background:var(--rakuten);color:#fff;}
+  .grow{flex:1;}
+  input[type=search],input[type=text],input[type=number],input[type=url],select,textarea{
+    width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:14px;
+    background:#fff;color:var(--txt);font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rakuten);}
+  .btn{
+    border:0;border-radius:10px;padding:9px 14px;font-size:13.5px;font-weight:700;
+    cursor:pointer;background:var(--rakuten);color:#fff;display:inline-flex;align-items:center;gap:6px;
+    white-space:nowrap;
+  }
+  .btn.sec{background:#eef0f3;color:var(--txt);}
+  .btn.gho{background:none;color:var(--rakuten);border:1px solid var(--rakuten);}
+  .btn.sm{padding:6px 10px;font-size:12px;}
+  .btn:active{transform:scale(.97);}
+  /* ---------- Inventory ---------- */
+  .cat-h{font-size:12px;font-weight:800;color:var(--sub);margin:14px 4px 6px;letter-spacing:.04em;display:flex;align-items:center;gap:6px;}
+  .cat-h::before{content:"";width:4px;height:14px;background:var(--rakuten);border-radius:2px;}
+  .inv-item{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line);}
+  .inv-item:last-child{border-bottom:0;}
+  .inv-name{flex:1;min-width:0;font-size:14px;}
+  .inv-name .nm{font-weight:600;word-break:break-word;}
+  .inv-name .note{font-size:11px;color:var(--sub);}
+  .pill{display:inline-block;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle;}
+  .pill.need{background:#fdecec;color:var(--danger);}
+  .pill.low{background:#fff3df;color:var(--warn);}
+  .pill.ok{background:#e7f4ec;color:var(--ok);}
+  .stepper{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .stepper button{border:0;background:#f4f5f7;width:32px;height:32px;font-size:18px;font-weight:700;color:var(--txt);cursor:pointer;}
+  .stepper .val{min-width:34px;text-align:center;font-weight:700;font-size:15px;}
+  .inv-actions{display:flex;gap:4px;}
+  .icon-btn{border:0;background:none;font-size:16px;cursor:pointer;padding:4px;color:var(--sub);}
+  .inv-item.dragging{opacity:.4;}
+  .inv-item.drag-over{box-shadow:inset 0 2px 0 var(--rakuten);}
+  .drag-h{cursor:grab;color:var(--sub);font-size:16px;padding:2px 2px;touch-action:none;flex-shrink:0;user-select:none;}
+  .buychk{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:13px;color:#fff;}
+  .buychk.on{background:var(--rakuten);border-color:var(--rakuten);}
+  .nm .star{font-size:10px;color:var(--warn);margin-left:4px;}
+  .inv-name .srch{font-size:11px;color:var(--accent);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:3px;margin-top:2px;}
+  /* ---------- Candidate (compare) ---------- */
+  .cand{border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:9px;background:#fff;}
+  .cand.best{border-color:var(--ok);box-shadow:0 0 0 2px rgba(19,122,63,.15);}
+  .cand .top{display:flex;align-items:flex-start;gap:8px;}
+  .cand .top .t{flex:1;min-width:0;}
+  .cand .thumb{width:48px;height:48px;border-radius:9px;object-fit:cover;background:#f0f1f4;border:1px solid var(--line);cursor:zoom-in;flex-shrink:0;}
+  .img-pre{width:64px;height:64px;border-radius:9px;object-fit:cover;border:1px solid var(--line);background:#f0f1f4;}
+  .lightbox{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;padding:20px;}
+  .lightbox.show{display:flex;}
+  .lightbox img{max-width:100%;max-height:86vh;border-radius:10px;}
+  .lightbox .lb-close{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:22px;cursor:pointer;}
+  .cand .t .nm{font-weight:700;font-size:14px;word-break:break-word;}
+  .cand .t .shop{font-size:11px;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .src-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;}
+  .src-tag.net{background:#fdecec;color:var(--rakuten);}
+  .src-tag.store{background:#e9f1fb;color:var(--accent);}
+  .cand .unit-row{display:flex;gap:8px;margin-top:8px;}
+  .unit-box{flex:1;background:#f7f8fa;border-radius:9px;padding:7px 8px;text-align:center;}
+  .unit-box .lab{font-size:10px;color:var(--sub);font-weight:600;}
+  .unit-box .v{font-size:16px;font-weight:800;}
+  .unit-box .v small{font-size:10px;font-weight:600;color:var(--sub);}
+  .unit-box.net .v{color:var(--ok);}
+  .cand .meta{font-size:11px;color:var(--sub);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap;}
+  .cand .row-actions{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;}
+  .best-tag{font-size:9.5px;font-weight:800;color:#fff;background:var(--ok);padding:1px 7px;border-radius:999px;}
+  a.urllink{color:var(--accent);font-size:11px;text-decoration:none;font-weight:600;}
+  .chk{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:14px;color:#fff;}
+  .chk.on{background:var(--rakuten);border-color:var(--rakuten);}
+  /* ---------- Shop calc ---------- */
+  .shop-card{border:1px solid var(--line);border-radius:14px;margin-bottom:12px;background:#fff;overflow:hidden;}
+  .shop-head{background:#fafbfc;padding:10px 12px;border-bottom:1px solid var(--line);}
+  .shop-head .nm{font-weight:800;font-size:15px;color:var(--accent);}
+  .shop-inputs{display:flex;gap:8px;margin-top:8px;}
+  .shop-inputs .f{flex:1;}
+  .shop-inputs label{font-size:10.5px;color:var(--sub);font-weight:600;display:block;margin-bottom:2px;}
+  .shop-line{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;}
+  .shop-line .nm{flex:1;min-width:0;word-break:break-word;}
+  .shop-line .amt{text-align:right;font-variant-numeric:tabular-nums;}
+  .shop-line .amt .a1{font-weight:700;}
+  .shop-line .amt .a2{font-size:10.5px;color:var(--ok);}
+  .shop-sum{padding:11px 12px;background:#fff;}
+  .sum-row{display:flex;justify-content:space-between;font-size:13px;padding:2px 0;}
+  .sum-row.total{font-size:16px;font-weight:800;border-top:1px dashed var(--line);margin-top:6px;padding-top:8px;}
+  .sum-row.total .v{color:var(--ok);}
+  .muted{color:var(--sub);}
+  .empty{text-align:center;color:var(--sub);padding:40px 16px;font-size:13px;}
+  .empty .big{font-size:34px;margin-bottom:8px;}
+  /* ---------- Modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+  .overlay.show{display:flex;}
+  .sheet{background:#fff;width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + var(--safe-b));max-height:92vh;overflow-y:auto;animation:up .25s;}
+  @keyframes up{from{transform:translateY(100%);}to{transform:none;}}
+  .sheet h3{margin:2px 0 14px;font-size:16px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--sub);margin-bottom:4px;}
+  .field .hint{font-size:10.5px;color:var(--sub);font-weight:400;margin-top:3px;}
+  .two{display:flex;gap:10px;}
+  .two .field{flex:1;}
+  .sheet-actions{display:flex;gap:10px;margin-top:6px;}
+  .sheet-actions .btn{flex:1;justify-content:center;padding:12px;}
+  .calc-preview{background:#f7f8fa;border-radius:10px;padding:10px;margin-bottom:12px;font-size:12px;}
+  .calc-preview .row{display:flex;justify-content:space-between;padding:1px 0;}
+  .calc-preview .row b{font-weight:800;}
+  .fab{position:fixed;right:16px;bottom:calc(80px + var(--safe-b));z-index:40;width:54px;height:54px;border-radius:50%;background:var(--rakuten);color:#fff;border:0;font-size:28px;box-shadow:0 4px 14px rgba(191,0,0,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .fab:active{transform:scale(.93);}
+  .sync-chip{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .sync-chip.on{background:rgba(255,255,255,.96);color:var(--rakuten);}
+  .sync-chip.err{background:#ffe2e2;color:#a30000;border-color:#ffb4b4;}
+  #setBtn{position:relative;padding:7px 11px;font-size:14px;}
+  .set-dot{position:absolute;top:3px;right:4px;width:8px;height:8px;border-radius:50%;background:#ffd000;border:1px solid var(--rakuten-d);}
+  /* ---- 設定シート ---- */
+  .set-group{margin-bottom:18px;}
+  .set-group .lbl{font-size:12px;font-weight:700;color:var(--sub);margin:0 0 8px;display:flex;align-items:center;gap:6px;}
+  .opt-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .opt{flex:1;min-width:64px;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:9px 6px;font-size:12.5px;font-weight:600;color:var(--txt);cursor:pointer;text-align:center;}
+  .opt.on{border-color:var(--rakuten);background:color-mix(in srgb,var(--rakuten) 12%,var(--card));color:var(--rakuten);}
+  .swatch-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .swatch{width:38px;height:38px;border-radius:50%;cursor:pointer;border:3px solid transparent;box-shadow:0 0 0 1px var(--line);}
+  .swatch.on{border-color:var(--txt);}
+  .feed-item{border-left:3px solid var(--rakuten);background:var(--card);border-radius:0 10px 10px 0;padding:9px 12px;margin-bottom:8px;border:1px solid var(--line);border-left-width:3px;}
+  .feed-item .ver{font-size:11px;font-weight:800;color:var(--rakuten);}
+  .feed-item .date{font-size:10.5px;color:var(--sub);margin-left:6px;font-weight:600;}
+  .feed-item ul{margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.7;}
+  .feed-item.is-new .ver::after{content:"NEW";background:#ffd000;color:#7a5b00;font-size:8.5px;padding:1px 4px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+  /* ---- ダークモード ---- */
+  html[data-theme="dark"]{
+    --bg:#15171c;--card:#1e2127;--line:#2c313a;--txt:#e6e8ec;--sub:#9aa0a6;
+    --ok:#4cc77f;--warn:#e0a93b;--danger:#ef6a6a;--accent:#5aa9e6;
+  }
+  html[data-theme="dark"] pre.code{background:#0d0f13;}
+  html[data-theme="dark"] ol.steps code{background:#2c313a;color:#e6e8ec;}
+  /* ---- 文字サイズ ---- */
+  html[data-fs="s"]{font-size:13.5px;} html[data-fs="m"]{font-size:15px;} html[data-fs="l"]{font-size:16.5px;}
+  body{font-size:1rem;}
+  pre.code{background:#1f2329;color:#e6e8ec;padding:10px;border-radius:8px;font-size:11px;overflow-x:auto;line-height:1.6;white-space:pre;}
+  ol.steps{margin:0;padding-left:20px;font-size:12.5px;line-height:1.7;}
+  ol.steps li{margin-bottom:6px;}
+  ol.steps code{background:#eef0f3;padding:1px 5px;border-radius:4px;font-size:11.5px;}
+  .toast{position:fixed;bottom:calc(90px + var(--safe-b));left:50%;transform:translateX(-50%);background:#1f2329;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:.96;}
+  .seg.sort{margin-left:auto;}
+  details.help{margin-bottom:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 12px;}
+  details.help summary{padding:11px 0;font-weight:700;font-size:13px;cursor:pointer;color:var(--accent);}
+  details.help .body{font-size:12px;color:var(--sub);padding-bottom:12px;line-height:1.7;}
+  .tiny{font-size:11px;color:var(--sub);}
+  .selbar{position:sticky;bottom:calc(64px + var(--safe-b));z-index:30;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;}
+  .chip-pick{border:1px solid var(--line);background:var(--card);color:var(--txt);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .chip-pick.on{background:color-mix(in srgb,var(--rakuten) 14%,var(--card));border-color:var(--rakuten);color:var(--rakuten);}
+  .chip-empty{font-size:11px;color:var(--sub);}
+  .badge-inline{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;padding:0 4px;margin-left:5px;background:var(--rakuten);color:#fff;font-size:10px;font-weight:800;}
+  .seg button.on .badge-inline{background:#fff;color:var(--rakuten);}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div>
+      <h1>🛒 在庫・購入管理</h1>
+      <div class="sub">在庫管理／単価比較／ショップ別ポイント計算</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button id="syncBtn" class="sync-chip">☁︎ 同期</button>
+      <button id="setBtn" class="sync-chip" aria-label="設定">⚙️<span id="setDot" class="set-dot" style="display:none"></span></button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ 在庫・買い物リスト ============ -->
+  <section id="view-inv" class="view active">
+    <div class="toolbar">
+      <div class="seg" id="inv-filter">
+        <button data-f="all" class="on">すべて</button>
+        <button data-f="need">要購入</button>
+        <button data-f="buy">購入予定<span class="badge-inline" id="inv-buy-n" style="display:none">0</span></button>
+      </div>
+      <input type="search" id="inv-search" class="grow" placeholder="🔍 品名で検索" style="min-width:120px;">
+      <button class="btn sec sm" id="inv-bulk">📝 まとめて入力</button>
+    </div>
+    <div id="inv-list"></div>
+  </section>
+
+  <!-- ============ 比較・お気に入り ============ -->
+  <section id="view-cmp" class="view">
+    <details class="help">
+      <summary>💡 使い方（単価のしくみ）</summary>
+      <div class="body">
+        楽天のお気に入り商品をURLでピン留めし、候補を並べて単価を比較できます。<br>
+        ・<b>正規単価</b>＝金額 ÷（数量×入数）<br>
+        ・<b>ポイント差引後単価</b>＝（金額−ポイント）÷（数量×入数）<br>
+        ・「入数」を入れるとケース／パック商品も<b>1個あたり</b>と<b>1パックあたり</b>の両方を表示。<br>
+        ・最安はみどり枠で <span class="best-tag">最安</span> 表示。買う候補は ☑ して「ショップ計算」へ。
+      </div>
+    </details>
+    <div class="toolbar">
+      <div class="seg" id="cmp-filter">
+        <button data-f="all" class="on">すべて</button>
+        <button data-f="buy">買う予定だけ<span class="badge-inline" id="cmp-buy-n" style="display:none">0</span></button>
+      </div>
+      <input type="search" id="cmp-search" class="grow" placeholder="🔍 品名・ショップで検索" style="min-width:120px;">
+      <div class="seg sort" id="cmp-sort">
+        <button data-s="net" class="on">実質単価順</button>
+        <button data-s="new">追加順</button>
+      </div>
+    </div>
+    <div id="cmp-list"></div>
+  </section>
+
+  <!-- ============ ショップ計算 ============ -->
+  <section id="view-shop" class="view">
+    <details class="help">
+      <summary>💡 ショップごとの割引・ポイントについて</summary>
+      <div class="body">
+        「比較」タブで ☑ した買う予定の商品が、<b>ショップごと</b>にまとまります。<br>
+        ・<b>ショップ割引(%)</b>…○%OFFクーポン等、ショップ全体にかかる割引。<br>
+        ・<b>ショップ付与ポイント</b>…購入時に楽天が提示するショップ単位の合計ポイント。<br>
+        　入力すると商品ごとのポイントを<b>上書き</b>し、ポイント分を商品額で按分して実質単価を再計算します。<br>
+        ・「購入完了」で在庫に反映＆アーカイブへ移動します。
+      </div>
+    </details>
+    <div id="shop-list"></div>
+  </section>
+
+  <!-- ============ アーカイブ ============ -->
+  <section id="view-arc" class="view">
+    <div class="toolbar">
+      <input type="search" id="arc-search" class="grow" placeholder="🔍 購入履歴を検索">
+      <button class="btn sec sm" id="arc-export">⬇︎ 書出し</button>
+    </div>
+    <div id="arc-list"></div>
+  </section>
+
+  <!-- ============ 分析 ============ -->
+  <section id="view-stat" class="view">
+    <div class="toolbar">
+      <input type="search" id="stat-search" class="grow" placeholder="🔍 品名で絞り込み">
+    </div>
+    <div id="stat-cycle"></div>
+    <div id="stat-rank"></div>
+  </section>
+</main>
+
+<button class="fab" id="fab">＋</button>
+
+<nav class="tabbar" id="tabbar">
+  <button data-v="inv" class="active"><span class="ic">📝</span>在庫リスト<span class="badge" id="badge-need" style="display:none">0</span></button>
+  <button data-v="cmp"><span class="ic">⭐</span>比較</button>
+  <button data-v="shop"><span class="ic">🛒</span>ショップ<span class="badge" id="badge-buy" style="display:none">0</span></button>
+  <button data-v="arc"><span class="ic">📦</span>履歴</button>
+  <button data-v="stat"><span class="ic">📊</span>分析</button>
+</nav>
+
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="lightbox" id="lightbox"><button class="lb-close" aria-label="閉じる">×</button><img id="lightbox-img" alt=""></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== Storage ===================== */
+const LS_KEY = 'rakuten_stock_v1';
+const APP_VERSION = '1.13.0';
+/* リリース情報フィード（新しい順に上へ追記） */
+const CHANGELOG = [
+  { v:'1.13.0', date:'2026-06-10', notes:[
+    '在庫リストのフィルターに「購入予定」を追加。✓チェックした品だけを絞り込んで表示できます',
+  ]},
+  { v:'1.12.0', date:'2026-06-10', notes:[
+    '在庫リストに「📝まとめて入力」を追加。「洗濯洗剤3、食器洗剤2…」のような走り書きから品名と数を自動で読み取って一括追加できます（確認画面つき）',
+    'リリースノートは直近5件のみ表示し、「さらに見る」で全件表示するようにしました',
+  ]},
+  { v:'1.11.0', date:'2026-06-10', notes:[
+    'アプリ名を「在庫・購入管理」に変更（楽天以外でも使えます）',
+    '在庫リストに「🔍楽天で検索」を追加。店を選ぶと「店名＋商品名」で楽天検索を新しいタブで開きます',
+    '購入判定を全品共通のルールに（残り何個で警告／既定しきい値／理想在庫の何分の1で補充）を⚙️設定で調整可。個別設定の品は「★個別」と表示',
+    '在庫の品目をドラッグ（⠿）で並び替えできるように',
+    '在庫リストで「買うもの」を手動チェック可能に（すべて／要購入どちらのタブでも）',
+    '⚙️設定に「検索でよく使う店」の登録・編集を追加',
+  ]},
+  { v:'1.10.0', date:'2026-06-10', notes:[
+    '比較タブに「買う予定だけ」フィルターを追加。✓した商品だけに絞り込めます',
+  ]},
+  { v:'1.9.0', date:'2026-06-09', notes:[
+    '入力欄をタップすると既存の値が全選択されるように（消さずにそのまま上書き入力できます）',
+  ]},
+  { v:'1.8.0', date:'2026-06-09', notes:[
+    'ショップ名・店名を入力欄の下のボタンからタップで選べるように（よく使う名前を購入元ごとに表示）',
+    '購入履歴の店名も候補に含めるようにしました',
+  ]},
+  { v:'1.7.0', date:'2026-06-09', notes:[
+    '比較候補に「商品画像URL」を追加。カードのサムネをタップすると画像を拡大表示できます',
+    '楽天の商品画像を長押し→画像アドレスをコピーして貼り付けてください（実店舗の商品にも使えます）',
+  ]},
+  { v:'1.6.0', date:'2026-06-09', notes:[
+    'ショップ計算で、各商品にショップ割引を適用した「割引後の額・単価」を薄く併記（割引%を入れた時のみ）',
+  ]},
+  { v:'1.5.0', date:'2026-06-09', notes:[
+    '比較に「買い物の日付（任意）」を追加できるように',
+    '金額を入れた日時を自動で記録（金額を変えると更新）。候補カードと編集画面に表示',
+    'テーマカラーをパステル系（ピンク・コーラル・ラベンダー・ミント・スカイ）に刷新。楽天レッドはそのまま選べます',
+  ]},
+  { v:'1.4.0', date:'2026-06-09', notes:[
+    'グローバル設定（⚙️）を新設：ダークモード・文字サイズ・テーマカラー・起動時タブを変更できます',
+    'このリリース情報フィードを追加しました',
+  ]},
+  { v:'1.3.0', date:'2026-06-09', notes:[
+    '📊分析タブを追加：購入周期から「次の購入目安日」を自動表示',
+    '店舗別ランキング：品目ごとに最安だった店を集計（🥇🥈🥉）',
+  ]},
+  { v:'1.2.0', date:'2026-06-09', notes:[
+    '1mlあたりの単価（ポイント差引前／差引後）を表示',
+    '楽天（ネット）と実店舗を同じ品の候補として比較できるように',
+    '在庫の「理想の上限数」を設定可能に（1/3で買い足し対象・残り1で警告）',
+  ]},
+  { v:'1.1.0', date:'2026-06-09', notes:[
+    'Googleログインでスマホ⇄PCの自動同期に対応（データは本人だけ）',
+  ]},
+];
+const DEFAULT_SETTINGS = { theme:'light', fontSize:'m', accent:'red', startTab:'inv', seenVersion:'',
+  warnAt:1, restockDivisor:3, defaultThreshold:1, searchShops:[] };
+const ACCENTS = {
+  red:      {name:'楽天レッド',     main:'#bf0000', dark:'#9a0000'},
+  pink:     {name:'パステルピンク', main:'#e07a9b', dark:'#c25f80'},
+  coral:    {name:'コーラル',       main:'#e8896d', dark:'#cf6c4f'},
+  lavender: {name:'ラベンダー',     main:'#9a8ad0', dark:'#7d6cba'},
+  mint:     {name:'ミント',         main:'#4fb89a', dark:'#389a7e'},
+  sky:      {name:'スカイ',         main:'#5fa8d8', dark:'#4789bc'},
+};
+let state = load();
+
+function load(){
+  let s;
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw) s = JSON.parse(raw);
+  }catch(e){}
+  if(!s) s = seed();
+  s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings||{});
+  return s;
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); if(fbRef && !applyingRemote) pushRemote(); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* ===================== Seed (初期在庫データ) ===================== */
+function seed(){
+  const I = (category,name,stock,threshold=1,note='')=>({id:uid(),category,name,stock,threshold,note});
+  const inventory = [
+    // 洗濯
+    I('洗濯','ワイドハイター',3), I('洗濯','エマール',6), I('洗濯','消臭ビーズ',2),
+    I('洗濯','スニーカー洗剤スプレー（おひさまの洗濯）',1), I('洗濯','洗濯洗剤',0),
+    I('洗濯','柔軟剤',0), I('洗濯','香りビーズ',0), I('洗濯','しわとり衣類スプレー',2),
+    // バス・洗面・スキンケア
+    I('バス・洗面・スキンケア','シャンプー',0), I('バス・洗面・スキンケア','コンディショナー',3),
+    I('バス・洗面・スキンケア','ボディソープ',0), I('バス・洗面・スキンケア','洗顔フォーム',0),
+    I('バス・洗面・スキンケア','メイク落とし',0), I('バス・洗面・スキンケア','お風呂保湿ミルク',1),
+    I('バス・洗面・スキンケア','お風呂の防カビ燻煙剤',2), I('バス・洗面・スキンケア','毛穴パック',1),
+    I('バス・洗面・スキンケア','化粧水',0), I('バス・洗面・スキンケア','HABA予備',1),
+    I('バス・洗面・スキンケア','歯磨き粉',0), I('バス・洗面・スキンケア','歯ブラシ大人',null,1,'数量未確認'),
+    I('バス・洗面・スキンケア','歯ブラシ子供',null,1,'数量未確認'),
+    I('バス・洗面・スキンケア','日焼け止め',0), I('バス・洗面・スキンケア','メンズヘアジェル',0),
+    I('バス・洗面・スキンケア','コンタクト液',0), I('バス・洗面・スキンケア','ハンドソープ',0),
+    // 掃除・消臭
+    I('掃除・消臭','コロコロシート',4), I('掃除・消臭','トイレのファブリーズ',1),
+    I('掃除・消臭','アルコールスプレー',1), I('掃除・消臭','ファブリーズ',5),
+    // キッチン
+    I('キッチン','ラップ30cm',1), I('キッチン','ラップ25cm',0), I('キッチン','アルミホイル25cm',1),
+    I('キッチン','食器洗剤 1250ml',3), I('キッチン','キッチンスポンジ 3個入り（セリア）',1),
+    I('キッチン','水切りネット',2), I('キッチン','キッチンタオル2倍巻き8ロール',-2,0,'不足ぎみ'),
+    // 紙・衛生用品
+    I('紙・衛生用品','トイレットペーパー',1), I('紙・衛生用品','ティッシュペーパー普通サイズ',4),
+    I('紙・衛生用品','ティッシュペーパー1/2サイズ',4), I('紙・衛生用品','ウェットシート',1),
+    I('紙・衛生用品','ドライシート',2), I('紙・衛生用品','おしりふき薄手',4),
+    I('紙・衛生用品','おしりふき厚手',9),
+    // ゴミ袋
+    I('ゴミ袋','燃えるゴミ 大',1), I('ゴミ袋','燃えるゴミ 中',5), I('ゴミ袋','燃えるゴミ 小',1),
+    I('ゴミ袋','燃えるゴミ 特小',1), I('ゴミ袋','燃えないごみ 小',1), I('ゴミ袋','燃えないごみ 特小',1),
+    I('ゴミ袋','透明ポリ袋45L',1),
+    // 生理用品
+    I('生理用品','ナプキン夜用360',1), I('生理用品','ナプキン昼用はだおもい26cm',1),
+    I('生理用品','ナプキン昼用はだおもい23cm',2), I('生理用品','ナプキン昼用はだおもい21cm',3),
+    // 食品
+    I('食品','カレーレトルト',null,1,'要確認'), I('食品','缶詰系',null,1,'要確認'),
+    I('食品','フルグラ',null,1,'要確認'),
+  ];
+  return { inventory, candidates:[], shops:{}, archive:[] , catOrder:[
+    '洗濯','バス・洗面・スキンケア','掃除・消臭','キッチン','紙・衛生用品','ゴミ袋','生理用品','食品','その他'
+  ]};
+}
+
+/* ===================== Helpers ===================== */
+const $ = s=>document.querySelector(s);
+const $$ = s=>[...document.querySelectorAll(s)];
+function fmtStamp(ms){ if(!ms)return''; const d=new Date(ms); const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fmtDate(s){ if(!s)return''; const d=new Date(s); if(isNaN(d))return s; const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())}`; }
+const yen = n=> (n==null||isNaN(n))?'—':'¥'+Math.round(n).toLocaleString('ja-JP');
+const yen1 = n=> (n==null||isNaN(n))?'—':'¥'+(Math.round(n*10)/10).toLocaleString('ja-JP');
+const yenV = n=>{ if(n==null||isNaN(n))return'—'; const d = n<1?100:(n<10?10:1); return '¥'+(Math.round(n*d)/d).toLocaleString('ja-JP'); };
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1600); }
+function esc(s){ return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* 単価計算: returns {regUnit, netUnit, regPack, netPack, totalItems} */
+function calcUnit(c){
+  const price = +c.price||0;
+  const qty = Math.max(1, +c.qty||1);
+  const per = Math.max(1, +c.perSet||1);
+  const pts = +c.points||0;
+  const items = qty*per;
+  const vol = +c.volume||0;            // 1個あたりの内容量
+  const totalVol = vol>0 ? items*vol : 0;
+  return {
+    regPack: price/qty, netPack:(price-pts)/qty,
+    regUnit: price/items, netUnit:(price-pts)/items,
+    totalItems: items, hasPack: per>1,
+    hasVol: vol>0, unit:(c.unit||'mL'), totalVol,
+    regVol: totalVol>0 ? price/totalVol : null,
+    netVol: totalVol>0 ? (price-pts)/totalVol : null
+  };
+}
+
+/* ===================== Tabs ===================== */
+function switchTab(v){
+  const b=$('#tabbar button[data-v="'+v+'"]'); if(!b) return;
+  $$('#tabbar button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  $$('.view').forEach(x=>x.classList.remove('active'));
+  $('#view-'+v).classList.add('active');
+  window.scrollTo(0,0);
+  // 表示中タブを再描画
+  if(v==='shop') renderShop();
+  else if(v==='cmp') renderCmp();
+  else if(v==='arc') renderArc();
+  else if(v==='inv') renderInv();
+  else if(v==='stat') renderStat();
+  // FAB は履歴・ショップ・分析タブでは非表示
+  $('#fab').style.display = (v==='arc'||v==='shop'||v==='stat') ? 'none':'flex';
+}
+$('#tabbar').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-v]'); if(!b)return;
+  switchTab(b.dataset.v);
+});
+
+/* ===================== 在庫リスト ===================== */
+let invFilter='all', invSearch='';
+$('#inv-filter').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  $$('#inv-filter button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  invFilter=b.dataset.f; renderInv();
+});
+$('#inv-search').addEventListener('input',e=>{invSearch=e.target.value.trim();renderInv();});
+$('#inv-bulk').addEventListener('click',openBulkInput);
+
+function restockPoint(it){
+  const g=state.settings;
+  // 理想の上限が設定されていれば、その「1/除数」を補充ライン（最低1）。なければグローバルの既定しきい値。
+  if(it.idealMax>0) return Math.max(1, Math.ceil(it.idealMax/(g.restockDivisor||3)));
+  return (it.threshold!=null && it.threshold!=='') ? it.threshold : (g.defaultThreshold??1);
+}
+function warnPoint(){ return state.settings.warnAt??1; }
+function needState(it){
+  if(it.stock==null) return 'unknown';
+  if(it.stock<=0) return 'need';                 // 在庫切れ
+  if(it.stock<=warnPoint()) return 'warn';       // グローバル警告ライン
+  if(it.stock<=restockPoint(it)) return 'low';   // 補充対象
+  return 'ok';
+}
+function renderInv(){
+  const wrap=$('#inv-list'); wrap.innerHTML='';
+  const order=state.catOrder||[];
+  const cats={};
+  state.inventory.forEach(it=>{(cats[it.category]=cats[it.category]||[]).push(it);});
+  const catKeys=[...new Set([...order, ...Object.keys(cats)])].filter(k=>cats[k]);
+  let needCount=0, buyCount=0;
+  state.inventory.forEach(it=>{const s=needState(it); if(s==='need'||s==='warn'||s==='low')needCount++; if(it.buyCheck)buyCount++;});
+  $('#badge-need').style.display = needCount? 'flex':'none';
+  $('#badge-need').textContent = needCount;
+  $('#inv-buy-n').style.display = buyCount? 'inline-flex':'none';
+  $('#inv-buy-n').textContent = buyCount;
+
+  let shown=0;
+  catKeys.forEach(cat=>{
+    let items=cats[cat].filter(it=>{
+      if(invSearch && !it.name.includes(invSearch)) return false;
+      if(invFilter==='need'){ const s=needState(it); return s==='need'||s==='warn'||s==='low'; }
+      if(invFilter==='buy') return !!it.buyCheck;
+      return true;
+    });
+    if(!items.length) return;
+    // 並び順は手動（ドラッグ）順を尊重。state.inventory の順序を維持。
+    const h=document.createElement('div'); h.className='cat-h'; h.textContent=cat;
+    wrap.appendChild(h);
+    const card=document.createElement('div'); card.className='card'; card.style.padding='2px 10px';
+    items.forEach(it=>{ card.appendChild(invRow(it)); shown++; });
+    wrap.appendChild(card);
+  });
+  if(!shown){
+    const msg = invFilter==='need' ? '要購入の品はありません 🎉'
+              : invFilter==='buy'  ? '購入予定の品はありません<br>各品の □ をタップして ✓ すると<br>ここに表示されます'
+              : '該当する品がありません';
+    wrap.innerHTML='<div class="empty"><div class="big">📭</div>'+msg+'</div>';
+  }
+}
+function invRow(it){
+  const row=document.createElement('div'); row.className='inv-item'; row.dataset.id=it.id;
+  const s=needState(it);
+  const warnN=warnPoint();
+  const pill = s==='need'?'<span class="pill need">要購入</span>'
+             : s==='warn'?`<span class="pill need">残り${warnN}以下・補充を</span>`
+             : s==='low'?'<span class="pill low">そろそろ</span>'
+             : s==='unknown'?'<span class="pill low">未確認</span>'
+             : '<span class="pill ok">在庫OK</span>';
+  const star = it.idealMax>0 ? '<span class="star" title="この品は理想在庫を個別設定中">★個別</span>' : '';
+  const stockDisp = it.stock==null? '—' : it.stock;
+  const maxNote = it.idealMax>0 ? `<div class="note">理想 ${it.idealMax} / 補充ライン ${restockPoint(it)}以下</div>` : '';
+  row.innerHTML=`
+    <span class="drag-h" data-act="drag" title="ドラッグで並び替え" draggable="true">⠿</span>
+    <div class="buychk ${it.buyCheck?'on':''}" data-act="check" title="買うものとしてチェック">${it.buyCheck?'✓':''}</div>
+    <div class="inv-name">
+      <div class="nm">${esc(it.name)}${pill}${star}</div>
+      ${maxNote}
+      ${it.note?`<div class="note">${esc(it.note)}</div>`:''}
+      <a href="#" class="srch" data-act="search">🔍 楽天で検索</a>
+    </div>
+    <div class="stepper">
+      <button data-act="dec">−</button>
+      <span class="val">${stockDisp}</span>
+      <button data-act="inc">＋</button>
+    </div>
+    <div class="inv-actions">
+      <button class="icon-btn" data-act="buy" title="比較に追加">🛒</button>
+      <button class="icon-btn" data-act="edit" title="編集">✎</button>
+    </div>`;
+  row.addEventListener('click',e=>{
+    const b=e.target.closest('[data-act]'); if(!b)return;
+    const a=b.dataset.act;
+    if(a==='inc'){ it.stock=(it.stock==null?0:it.stock)+1; }
+    else if(a==='dec'){ it.stock=(it.stock==null?0:it.stock)-1; }
+    else if(a==='check'){ it.buyCheck=!it.buyCheck; save(); renderInv(); return; }
+    else if(a==='search'){ e.preventDefault(); return openSearchPicker(it); }
+    else if(a==='edit'){ return openInvEdit(it); }
+    else if(a==='buy'){ return addCandidateFromInv(it); }
+    else if(a==='drag'){ return; }
+    save(); renderInv();
+  });
+  attachDrag(row,it);
+  return row;
+}
+
+/* 楽天検索：店を選んで「店名＋商品名」で検索 */
+function rakutenSearchUrl(name,shop){
+  const q=[shop,name].filter(Boolean).join(' ');
+  return 'https://search.rakuten.co.jp/search/mall/'+encodeURIComponent(q)+'/';
+}
+function openSearchPicker(it){
+  const shops=(state.settings.searchShops||[]).filter(Boolean);
+  const list = shops.map(sh=>`<button class="btn sec" data-shop="${esc(sh)}" style="justify-content:flex-start;width:100%;margin-bottom:6px;">🏬 ${esc(sh)} で探す</button>`).join('');
+  openSheet(`<h3>🔍 楽天で検索</h3>
+    <div class="tiny" style="margin-bottom:12px;">「<b>${esc(it.name)}</b>」を楽天市場で検索します。店を選ぶと「店名＋商品名」で絞り込めます。</div>
+    <button class="btn" data-shop="" style="justify-content:center;width:100%;margin-bottom:12px;">🛒 店指定なしで検索</button>
+    ${shops.length?`<div class="set-group"><div class="lbl">よく使う店</div>${list}</div>`:'<div class="tiny" style="margin-bottom:10px;">よく使う店は ⚙️設定 → 「検索でよく使う店」で登録できます。</div>'}
+    <div class="sheet-actions"><button class="btn sec" id="srch-cancel">閉じる</button></div>`);
+  $('#sheet').querySelectorAll('[data-shop]').forEach(b=>b.onclick=()=>{
+    window.open(rakutenSearchUrl(it.name,b.dataset.shop),'_blank','noopener');
+    closeSheet();
+  });
+  $('#srch-cancel').onclick=closeSheet;
+}
+
+/* ドラッグ並び替え（同カテゴリ内） */
+let dragItem=null;
+function attachDrag(row,it){
+  row.addEventListener('dragstart',e=>{ dragItem=it; row.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+  row.addEventListener('dragend',()=>{ row.classList.remove('dragging'); $$('.inv-item').forEach(r=>r.classList.remove('drag-over')); });
+  row.addEventListener('dragover',e=>{ if(!dragItem||dragItem===it||dragItem.category!==it.category)return; e.preventDefault(); row.classList.add('drag-over'); });
+  row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+  row.addEventListener('drop',e=>{
+    e.preventDefault(); row.classList.remove('drag-over');
+    if(!dragItem||dragItem===it||dragItem.category!==it.category)return;
+    reorderInventory(dragItem,it);
+  });
+}
+function reorderInventory(src,target){
+  const arr=state.inventory;
+  arr.splice(arr.indexOf(src),1);
+  arr.splice(arr.indexOf(target),0,src);
+  save(); renderInv();
+}
+
+function openInvEdit(it){
+  const isNew=!it;
+  it = it || {id:null,category:'その他',name:'',stock:0,threshold:1,idealMax:0,note:''};
+  const cats=[...new Set([...(state.catOrder||[]), ...state.inventory.map(x=>x.category)])];
+  openSheet(`
+    <h3>${isNew?'品目を追加':'品目を編集'}</h3>
+    <div class="field"><label>品名</label><input type="text" id="f-name" value="${esc(it.name)}" placeholder="例）柔軟剤"></div>
+    <div class="two">
+      <div class="field"><label>カテゴリ</label>
+        <select id="f-cat">${cats.map(c=>`<option ${c===it.category?'selected':''}>${esc(c)}</option>`).join('')}<option value="__new">＋ 新規カテゴリ</option></select>
+      </div>
+      <div class="field"><label>在庫数</label><input type="number" id="f-stock" value="${it.stock==null?'':it.stock}" placeholder="未設定"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>理想の在庫数（上限）</label><input type="number" id="f-max" value="${it.idealMax||''}" placeholder="任意">
+        <div class="hint">入れると<b>1/3以下で補充対象</b>・残り1で警告</div></div>
+      <div class="field"><label>不足とみなす数（以下）</label><input type="number" id="f-th" value="${it.threshold??1}">
+        <div class="hint">理想を入れない場合のしきい値</div></div>
+    </div>
+    <div class="field"><label>メモ</label><input type="text" id="f-note" value="${esc(it.note||'')}" placeholder="サイズ・購入場所など"></div>
+    <div class="sheet-actions">
+      ${isNew?'':'<button class="btn sec" id="f-del">削除</button>'}
+      <button class="btn" id="f-save">保存</button>
+    </div>
+  `);
+  $('#f-cat').addEventListener('change',e=>{
+    if(e.target.value==='__new'){ const nc=prompt('新しいカテゴリ名'); if(nc){ const o=document.createElement('option');o.textContent=nc;o.selected=true;e.target.insertBefore(o,e.target.lastChild);} else e.target.selectedIndex=0; }
+  });
+  $('#f-save').onclick=()=>{
+    const name=$('#f-name').value.trim(); if(!name)return toast('品名を入力してください');
+    const sv=$('#f-stock').value;
+    it.name=name; it.category=$('#f-cat').value; it.stock= sv===''?null:(+sv);
+    it.threshold=+$('#f-th').value||0; it.idealMax=+$('#f-max').value||0; it.note=$('#f-note').value.trim();
+    if(isNew){ it.id=uid(); state.inventory.push(it); }
+    save(); closeSheet(); renderInv(); toast('保存しました');
+  };
+  if(!isNew) $('#f-del').onclick=()=>{ if(confirm('削除しますか？')){ state.inventory=state.inventory.filter(x=>x.id!==it.id); save(); closeSheet(); renderInv(); toast('削除しました'); } };
+}
+
+/* ===================== まとめて入力（走り書き解析） ===================== */
+// 「洗濯洗剤3、食器洗剤2、トイレットペーパー1」などを {name,stock} の配列に分解
+function parseBulkInput(text){
+  if(!text) return [];
+  // 区切り：改行・読点(、,)・中黒(・)・全角/半角セミコロン・タブ
+  const parts = text.split(/[\n\r、,・;；\t]+/).map(s=>s.trim()).filter(Boolean);
+  const zen2han = s=>s.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+  return parts.map(raw=>{
+    let s=zen2han(raw).trim();
+    // 末尾の「×3 / x3 / *3 / 3個 / 3つ / 3本 / : 3 / 3」などから数量を抽出
+    let stock=null;
+    const m = s.match(/^(.*?)[\s:：]*[×xX*＊]?\s*(\d+)\s*(個|つ|本|枚|ロール|箱|袋|パック|set|セット)?\s*$/);
+    if(m && m[1].trim()){ s=m[1].trim(); stock=parseInt(m[2],10); }
+    // 末尾の区切り記号や「：」を掃除
+    s=s.replace(/[\s:：×xX*＊\-ー]+$/,'').trim();
+    return { name:s, stock };
+  }).filter(o=>o.name);
+}
+
+function openBulkInput(){
+  const cats=[...new Set([...(state.catOrder||[]), ...state.inventory.map(x=>x.category)])];
+  openSheet(`<h3>📝 まとめて入力</h3>
+    <div class="tiny" style="margin-bottom:10px;">走り書きを貼り付け／入力してください。<b>品名と数字</b>を読み取って一覧にします。<br>例）<code>洗濯洗剤3、食器洗剤2、トイレットペーパー1</code>（改行・読点・「3個」などでも可）</div>
+    <div class="field"><textarea id="bulk-text" rows="5" placeholder="洗濯洗剤3&#10;食器洗剤2&#10;トイレットペーパー1"></textarea></div>
+    <div class="field"><label>追加先カテゴリ</label>
+      <select id="bulk-cat">${cats.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+    <div class="sheet-actions"><button class="btn" id="bulk-parse">読み取る →</button></div>
+    <div id="bulk-preview"></div>`);
+  $('#bulk-parse').onclick=()=>{
+    const items=parseBulkInput($('#bulk-text').value);
+    const prev=$('#bulk-preview');
+    if(!items.length){ prev.innerHTML='<div class="tiny" style="margin-top:10px;">読み取れる品名がありませんでした。</div>'; return; }
+    prev.innerHTML = `<div class="cat-h">確認（${items.length}件）</div>
+      <div class="card" style="padding:2px 10px;">
+      ${items.map((o,i)=>{
+        const exists=state.inventory.some(x=>x.name===o.name);
+        return `<div class="inv-item">
+          <div class="buychk on" data-bi="${i}" style="cursor:pointer;">✓</div>
+          <div class="inv-name"><div class="nm">${esc(o.name)}${exists?'<span class="pill low">既存・更新</span>':''}</div></div>
+          <input type="number" class="bulk-qty" data-bi="${i}" value="${o.stock==null?'':o.stock}" placeholder="数" style="width:64px;text-align:center;">
+        </div>`;
+      }).join('')}
+      </div>
+      <div class="tiny" style="margin:6px 0;">✓した品だけ追加します。既にある品名は在庫数を上書き更新します。</div>
+      <div class="sheet-actions"><button class="btn" id="bulk-commit">この内容で取り込む</button></div>`;
+    // チェック切替
+    prev.querySelectorAll('.buychk').forEach(c=>c.onclick=()=>{ const on=c.classList.toggle('on'); c.textContent=on?'✓':''; });
+    $('#bulk-commit').onclick=()=>{
+      const cat=$('#bulk-cat').value;
+      let added=0, updated=0;
+      items.forEach((o,i)=>{
+        const chk=prev.querySelector(`.buychk[data-bi="${i}"]`); if(!chk||!chk.classList.contains('on')) return;
+        const qEl=prev.querySelector(`.bulk-qty[data-bi="${i}"]`);
+        const stock = qEl.value===''? null : (+qEl.value);
+        const ex=state.inventory.find(x=>x.name===o.name);
+        if(ex){ ex.stock=stock; updated++; }
+        else { state.inventory.push({id:uid(),category:cat,name:o.name,stock,threshold:1,idealMax:0,note:''}); added++; }
+      });
+      save(); closeSheet(); renderInv();
+      toast(`追加${added}件・更新${updated}件`);
+    };
+  };
+}
+
+/* ===================== 比較・候補 ===================== */
+let cmpSearch='', cmpSort='net', cmpFilter='all';
+$('#cmp-search').addEventListener('input',e=>{cmpSearch=e.target.value.trim();renderCmp();});
+$('#cmp-sort').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#cmp-sort button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cmpSort=b.dataset.s;renderCmp();});
+$('#cmp-filter').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;$$('#cmp-filter button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cmpFilter=b.dataset.f;renderCmp();});
+
+function addCandidateFromInv(it){
+  openCandEdit({id:null,name:it.name,fromInv:it.id,source:'net',shop:'',url:'',price:'',qty:1,perSet:1,points:0,selected:true,note:''});
+}
+
+function renderCmp(){
+  const wrap=$('#cmp-list'); wrap.innerHTML='';
+  let list=state.candidates.filter(c=> !c.archived &&
+    (cmpFilter!=='buy' || c.selected) &&
+    (!cmpSearch || (c.name||'').includes(cmpSearch) || (c.shop||'').includes(cmpSearch)));
+  // group by name for "最安" detection
+  const byName={};
+  list.forEach(c=>{(byName[c.name]=byName[c.name]||[]).push(c);});
+  Object.values(byName).forEach(g=>{
+    if(g.length<2) return;
+    let best=g.reduce((m,c)=> calcUnit(c).netUnit<calcUnit(m).netUnit?c:m);
+    g.forEach(c=>c._best=(c===best));
+  });
+  if(cmpSort==='net') list.sort((a,b)=>calcUnit(a).netUnit-calcUnit(b).netUnit);
+  else list.sort((a,b)=> (b._t||0)-(a._t||0));
+
+  const buyCount=state.candidates.filter(c=>c.selected&&!c.archived).length;
+  $('#badge-buy').style.display=buyCount?'flex':'none'; $('#badge-buy').textContent=buyCount;
+  $('#cmp-buy-n').style.display=buyCount?'inline-flex':'none'; $('#cmp-buy-n').textContent=buyCount;
+
+  if(!list.length){
+    wrap.innerHTML = cmpFilter==='buy'
+      ? '<div class="empty"><div class="big">🛒</div>買う予定の商品がありません<br>各カードの □ をタップして ✓ すると<br>ここに表示されます</div>'
+      : '<div class="empty"><div class="big">⭐</div>右下の＋から、楽天のお気に入り商品を<br>URLでピン留めして比較しましょう</div>';
+    return;
+  }
+  list.forEach(c=>wrap.appendChild(candCard(c)));
+}
+function candCard(c){
+  const u=calcUnit(c);
+  const el=document.createElement('div'); el.className='cand'+(c._best?' best':'');
+  el.innerHTML=`
+    <div class="top">
+      <div class="chk ${c.selected?'on':''}" data-act="sel">${c.selected?'✓':''}</div>
+      ${c.image?`<img class="thumb" data-act="img" src="${esc(c.image)}" alt="" onerror="this.style.display='none'">`:''}
+      <div class="t">
+        <div class="nm">${esc(c.name)} ${c._best?'<span class="best-tag">最安</span>':''}</div>
+        ${c.shop?`<div class="shop">${c.source==='store'?'🏬':'🛒'} ${esc(c.shop)}<span class="src-tag ${c.source==='store'?'store':'net'}">${c.source==='store'?'実店舗':'ネット'}</span></div>`:`<div class="shop"><span class="src-tag ${c.source==='store'?'store':'net'}">${c.source==='store'?'実店舗':'ネット'}</span></div>`}
+      </div>
+      <button class="icon-btn" data-act="edit">✎</button>
+    </div>
+    <div class="unit-row">
+      <div class="unit-box">
+        <div class="lab">ﾎﾟｲﾝﾄ差引前 単価${u.hasPack?'(1個)':''}</div>
+        <div class="v">${yen1(u.regUnit)}</div>
+      </div>
+      <div class="unit-box net">
+        <div class="lab">ﾎﾟｲﾝﾄ差引後 単価${u.hasPack?'(1個)':''}</div>
+        <div class="v">${yen1(u.netUnit)}</div>
+      </div>
+      ${u.hasPack?`
+      <div class="unit-box">
+        <div class="lab">1ﾊﾟｯｸ(差引後)</div>
+        <div class="v">${yen1(u.netPack)}</div>
+      </div>`:''}
+      ${u.hasVol?`
+      <div class="unit-box">
+        <div class="lab">ﾎﾟｲﾝﾄ差引前 1${u.unit}単価</div>
+        <div class="v">${yenV(u.regVol)}<small>/${u.unit}</small></div>
+      </div>
+      <div class="unit-box net">
+        <div class="lab">ﾎﾟｲﾝﾄ差引後 1${u.unit}単価</div>
+        <div class="v">${yenV(u.netVol)}<small>/${u.unit}</small></div>
+      </div>`:''}
+    </div>
+    <div class="meta">
+      <span>金額 ${yen(+c.price)}</span>
+      <span>数量 ${c.qty}${u.hasPack?`×入数${c.perSet}＝${u.totalItems}個`:'個'}</span>
+      ${u.hasVol?`<span>容量 ${u.totalVol.toLocaleString()}${u.unit}</span>`:''}
+      <span>P ${(+c.points||0).toLocaleString()}</span>
+      ${c.buyDate?`<span>🛍 買物日 ${fmtDate(c.buyDate)}</span>`:''}
+      ${c.priceUpdatedAt?`<span class="tiny">🕒 金額入力 ${fmtStamp(c.priceUpdatedAt)}</span>`:''}
+      ${c.url?`<a class="urllink" href="${esc(c.url)}" target="_blank" rel="noopener">楽天で開く ↗</a>`:''}
+    </div>
+    <div class="row-actions">
+      <button class="btn sec sm" data-act="dup">複製して別候補</button>
+      <button class="btn sec sm" data-act="del">削除</button>
+    </div>`;
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('[data-act]'); if(!b)return;
+    if(e.target.closest('a'))return;
+    const a=b.dataset.act;
+    if(a==='img'){ showImage(c.image); }
+    else if(a==='sel'){ c.selected=!c.selected; save(); renderCmp(); }
+    else if(a==='edit'){ openCandEdit(c); }
+    else if(a==='del'){ if(confirm('削除しますか？')){state.candidates=state.candidates.filter(x=>x.id!==c.id);save();renderCmp();} }
+    else if(a==='dup'){ const n={...c,id:uid(),_best:false,_t:Date.now(),selected:false,url:'',shop:''}; state.candidates.push(n); save(); openCandEdit(n); }
+  });
+  return el;
+}
+
+function openCandEdit(c){
+  const isNew=!c.id;
+  c = c.id? c : {...c, id:null};
+  // 既知のショップ名を購入元(ネット/実店舗)ごとに集約（候補＋購入履歴から）
+  const shopBySrc={net:[],store:[]};
+  const seen={net:new Set(),store:new Set()};
+  const addShop=(name,src)=>{ const k=src==='store'?'store':'net'; if(name&&!seen[k].has(name)){seen[k].add(name);shopBySrc[k].push(name);} };
+  state.candidates.forEach(x=>addShop(x.shop,x.source));
+  (state.archive||[]).forEach(r=>(r.items||[]).forEach(i=>addShop(i.shop,i.source)));
+  shopBySrc.net.sort((a,b)=>a.localeCompare(b,'ja')); shopBySrc.store.sort((a,b)=>a.localeCompare(b,'ja'));
+  const shopNames=[...new Set([...shopBySrc.net,...shopBySrc.store])];
+  openSheet(`
+    <h3>${isNew?'比較候補を追加':'候補を編集'}</h3>
+    <div class="field"><label>購入元</label>
+      <div class="seg" id="c-source" style="width:100%;">
+        <button data-s="net" class="${(c.source||'net')==='net'?'on':''}" style="flex:1;">🛒 ネット（楽天等）</button>
+        <button data-s="store" class="${c.source==='store'?'on':''}" style="flex:1;">🏬 実店舗</button>
+      </div></div>
+    <div class="field"><label>品名</label><input type="text" id="c-name" value="${esc(c.name||'')}" placeholder="例）柔軟剤 詰替">
+      <div class="hint">容量違いを比べたい時は<b>同じ品名</b>にすると最安が出ます</div></div>
+    <div class="field" id="c-url-field"><label>楽天URL（任意）</label><input type="url" id="c-url" value="${esc(c.url||'')}" placeholder="https://item.rakuten.co.jp/...">
+      <div class="hint">お気に入りの商品ページURLを貼り付け</div></div>
+    <div class="field"><label>商品画像URL（任意）</label>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <img id="c-img-pre" class="img-pre" style="${c.image?'':'display:none'}" src="${esc(c.image||'')}" alt="">
+        <input type="url" id="c-img" value="${esc(c.image||'')}" placeholder="画像アドレスを貼り付け" style="flex:1;">
+      </div>
+      <div class="hint">楽天の商品画像を<b>長押し → 「画像アドレスをコピー」</b>して貼ると、カードでタップ拡大できます</div></div>
+    <div class="field"><label id="c-shop-label">ショップ名</label><input type="text" id="c-shop" value="${esc(c.shop||'')}" list="shoplist" placeholder="例）○○ストア楽天市場店">
+      <datalist id="shoplist">${shopNames.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
+      <div class="chip-row" id="c-shop-chips"></div></div>
+    <div class="two">
+      <div class="field"><label>金額（税込・送料込）</label><input type="number" id="c-price" value="${c.price??''}" placeholder="円"></div>
+      <div class="field"><label>商品ポイント</label><input type="number" id="c-pts" value="${c.points??0}" placeholder="P">
+        <div class="hint">仮の値でOK（購入時に上書き）</div></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>数量（パック数）</label><input type="number" id="c-qty" value="${c.qty??1}" min="1"></div>
+      <div class="field"><label>入数（1パックの個数）</label><input type="number" id="c-per" value="${c.perSet??1}" min="1">
+        <div class="hint">ケース／箱なら本数を</div></div>
+    </div>
+    <div class="two">
+      <div class="field"><label>1個あたりの内容量（任意）</label><input type="number" id="c-vol" value="${c.volume??''}" placeholder="例）500"step="any">
+        <div class="hint">入れると1${esc(c.unit||'mL')}あたり単価を計算</div></div>
+      <div class="field"><label>単位</label>
+        <select id="c-unit">${['mL','L','g','kg','個','枚','ロール','m'].map(u=>`<option ${ (c.unit||'mL')===u?'selected':''}>${u}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="field"><label>買い物の日付（任意）</label><input type="date" id="c-buydate" value="${esc(c.buyDate||'')}">
+      <div class="hint">実際に買った日。あとで履歴・周期の参考になります</div></div>
+    ${c.priceUpdatedAt?`<div class="hint" style="margin:-4px 0 12px;">🕒 金額の入力日時：${fmtStamp(c.priceUpdatedAt)}（金額を変えると自動更新）</div>`:''}
+    <div class="calc-preview" id="c-prev"></div>
+    <div class="field"><label>メモ</label><input type="text" id="c-note" value="${esc(c.note||'')}"></div>
+    <div class="sheet-actions">
+      <button class="btn sec" id="c-cancel">キャンセル</button>
+      <button class="btn" id="c-save">保存</button>
+    </div>
+  `);
+  const upd=()=>{
+    const t={price:+$('#c-price').value,points:+$('#c-pts').value,qty:+$('#c-qty').value,perSet:+$('#c-per').value,volume:+$('#c-vol').value,unit:$('#c-unit').value};
+    const u=calcUnit(t);
+    $('#c-prev').innerHTML=`
+      <div class="row"><span>合計個数</span><b>${u.totalItems} 個</b></div>
+      <div class="row"><span>ポイント差引前 単価（1個）</span><b>${yen1(u.regUnit)}</b></div>
+      <div class="row"><span>ポイント差引後 単価（1個）</span><b style="color:var(--ok)">${yen1(u.netUnit)}</b></div>
+      ${u.hasPack?`<div class="row"><span>ポイント差引後 単価（1パック）</span><b style="color:var(--ok)">${yen1(u.netPack)}</b></div>`:''}
+      ${u.hasVol?`<div class="row"><span>総容量</span><b>${u.totalVol.toLocaleString()} ${u.unit}</b></div>
+      <div class="row"><span>ポイント差引前 単価（1${u.unit}）</span><b>${yenV(u.regVol)}/${u.unit}</b></div>
+      <div class="row"><span>ポイント差引後 単価（1${u.unit}）</span><b style="color:var(--ok)">${yenV(u.netVol)}/${u.unit}</b></div>`:''}`;
+  };
+  ['c-price','c-pts','c-qty','c-per','c-vol'].forEach(id=>$('#'+id).addEventListener('input',upd));
+  $('#c-unit').addEventListener('change',upd); upd();
+  // 画像URLのライブプレビュー
+  const imgPre=$('#c-img-pre');
+  $('#c-img').addEventListener('input',e=>{ const v=e.target.value.trim(); if(v){imgPre.src=v;imgPre.style.display='block';} else {imgPre.style.display='none';imgPre.src='';} });
+  imgPre.onerror=()=>{ imgPre.style.display='none'; };
+  // 購入元トグル：実店舗ならURL欄を隠し、ショップ名ラベルを「店名」に
+  let curSource=c.source||'net';
+  const renderShopChips=()=>{
+    const wrap=$('#c-shop-chips'); if(!wrap)return;
+    const names=shopBySrc[curSource==='store'?'store':'net'];
+    const cur=$('#c-shop').value.trim();
+    if(!names.length){ wrap.innerHTML='<span class="chip-empty">よく使う'+(curSource==='store'?'店':'ショップ')+'はここにタップ候補が出ます</span>'; return; }
+    wrap.innerHTML=names.map(n=>`<button type="button" class="chip-pick${n===cur?' on':''}" data-shop="${esc(n)}">${esc(n)}</button>`).join('');
+    wrap.querySelectorAll('.chip-pick').forEach(b=>b.onclick=()=>{ $('#c-shop').value=b.dataset.shop; renderShopChips(); });
+  };
+  const applySource=()=>{
+    $('#c-url-field').style.display = curSource==='store'?'none':'block';
+    $('#c-shop-label').textContent = curSource==='store'?'店名':'ショップ名';
+    $('#c-shop').placeholder = curSource==='store'?'例）ドラッグストア○○ 駅前店':'例）○○ストア楽天市場店';
+    renderShopChips();
+  };
+  $('#c-shop').addEventListener('input',renderShopChips);
+  $('#c-source').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    $$('#c-source button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    curSource=b.dataset.s; applySource();
+  });
+  applySource();
+  $('#c-cancel').onclick=closeSheet;
+  $('#c-save').onclick=()=>{
+    const name=$('#c-name').value.trim(); if(!name)return toast('品名を入力してください');
+    const newPrice=+$('#c-price').value||0;
+    // 金額が変わったら入力日時を自動記録（新規もここで付与）
+    if(newPrice!==(c.price||0) || !c.priceUpdatedAt){ if(newPrice>0) c.priceUpdatedAt=Date.now(); }
+    Object.assign(c,{
+      name, source:curSource, url:$('#c-url').value.trim(), shop:$('#c-shop').value.trim(),
+      price:newPrice, points:+$('#c-pts').value||0,
+      qty:+$('#c-qty').value||1, perSet:+$('#c-per').value||1,
+      volume:+$('#c-vol').value||0, unit:$('#c-unit').value,
+      image:$('#c-img').value.trim(),
+      buyDate:$('#c-buydate').value||'', note:$('#c-note').value.trim()
+    });
+    if(isNew){ c.id=uid(); c._t=Date.now(); if(c.selected===undefined)c.selected=false; state.candidates.push(c); }
+    save(); closeSheet(); renderCmp(); toast('保存しました');
+  };
+}
+
+/* ===================== ショップ計算 ===================== */
+function getShopMeta(name){
+  state.shops = state.shops||{};
+  if(!state.shops[name]) state.shops[name]={discount:0,points:''};
+  return state.shops[name];
+}
+function renderShop(){
+  const wrap=$('#shop-list'); wrap.innerHTML='';
+  const buying=state.candidates.filter(c=>c.selected&&!c.archived);
+  if(!buying.length){ wrap.innerHTML='<div class="empty"><div class="big">🛒</div>「比較」タブで買う商品を ☑ すると<br>ここにショップごとにまとまります</div>'; return; }
+  const groups={};
+  buying.forEach(c=>{ const k=c.shop||'(ショップ未設定)'; (groups[k]=groups[k]||[]).push(c); });
+
+  let grandReg=0, grandNet=0;
+  Object.entries(groups).forEach(([shop,items])=>{
+    const meta=getShopMeta(shop);
+    const card=document.createElement('div'); card.className='shop-card';
+    // header with inputs
+    const head=document.createElement('div'); head.className='shop-head';
+    head.innerHTML=`
+      <div class="nm">🏬 ${esc(shop)}</div>
+      <div class="shop-inputs">
+        <div class="f"><label>ショップ割引 %OFF</label><input type="number" class="s-disc" value="${meta.discount||''}" placeholder="0"></div>
+        <div class="f"><label>ショップ付与P（上書き）</label><input type="number" class="s-pts" value="${meta.points??''}" placeholder="自動"></div>
+      </div>`;
+    card.appendChild(head);
+
+    // compute discounted prices
+    const disc=(+meta.discount||0)/100;
+    let sumReg=0, sumDisc=0, sumItemPts=0;
+    items.forEach(c=>{ const p=+c.price||0; sumReg+=p; sumDisc+=p*(1-disc); sumItemPts+=(+c.points||0); });
+    const shopPts = (meta.points===''||meta.points==null)? sumItemPts : (+meta.points||0);
+    const netTotal = sumDisc - shopPts;
+
+    items.forEach(c=>{
+      const p=+c.price||0; const dPrice=p*(1-disc);
+      // 按分でこの商品が負担するポイント
+      const share = sumDisc>0? (dPrice/sumDisc):0;
+      const itemNet = dPrice - shopPts*share;
+      const u=calcUnit(c);
+      const items_n=u.totalItems;
+      const line=document.createElement('div'); line.className='shop-line';
+      line.innerHTML=`
+        <div class="nm">${esc(c.name)}<br><span class="tiny">数量${c.qty}${u.hasPack?`×${c.perSet}＝${items_n}個`:''}</span></div>
+        <div class="amt">
+          <div class="a1">${yen(p)}</div>
+          ${disc>0?`<div class="a2" style="opacity:.55">（${meta.discount}%引後 ${yen(dPrice)}・@${yen1(dPrice/items_n)}/個）</div>`:''}
+          <div class="a2">実質${yen(itemNet)}・@${yen1(itemNet/items_n)}/個</div>
+        </div>`;
+      card.appendChild(line);
+    });
+
+    const sum=document.createElement('div'); sum.className='shop-sum';
+    sum.innerHTML=`
+      <div class="sum-row"><span class="muted">正規合計</span><span>${yen(sumReg)}</span></div>
+      ${disc>0?`<div class="sum-row"><span class="muted">割引後（${meta.discount}%OFF）</span><span>${yen(sumDisc)}</span></div>`:''}
+      <div class="sum-row"><span class="muted">差引ポイント${(meta.points===''||meta.points==null)?'（商品P合計）':'（ショップ上書き）'}</span><span style="color:var(--ok)">−${yen(shopPts)}</span></div>
+      <div class="sum-row total"><span>実質支払 合計</span><span class="v">${yen(netTotal)}</span></div>
+      <button class="btn sm done-btn" style="width:100%;justify-content:center;margin-top:10px;">✅ このショップを購入完了 → 在庫反映</button>`;
+    card.appendChild(sum);
+
+    // events
+    head.querySelector('.s-disc').addEventListener('input',e=>{meta.discount=+e.target.value||0;save();renderShop();});
+    head.querySelector('.s-pts').addEventListener('input',e=>{meta.points=e.target.value;save();renderShop();});
+    sum.querySelector('.done-btn').addEventListener('click',()=>completeShop(shop,items,{sumReg,sumDisc,shopPts,netTotal,disc:meta.discount||0}));
+
+    wrap.appendChild(card);
+    grandReg+=sumReg; grandNet+=netTotal;
+  });
+
+  const tot=document.createElement('div'); tot.className='card';
+  tot.innerHTML=`<div class="sum-row"><span class="muted">全ショップ 正規合計</span><span>${yen(grandReg)}</span></div>
+    <div class="sum-row total"><span>合計 実質支払</span><span class="v">${yen(grandNet)}</span></div>`;
+  wrap.appendChild(tot);
+}
+
+function completeShop(shop,items,sums){
+  if(!confirm(`「${shop}」の${items.length}品を購入完了にしますか？\n対応する在庫が+1され、履歴に記録されます。`)) return;
+  const disc=(sums.disc||0)/100;
+  const sumDisc=sums.sumDisc||0, shopPts=sums.shopPts||0;
+  const rec={
+    id:uid(), date:new Date().toISOString().slice(0,10), shop,
+    discount:sums.disc, total:sums.sumDisc, points:sums.shopPts, net:sums.netTotal,
+    items: items.map(c=>{
+      const u=calcUnit(c);
+      const p=+c.price||0, dPrice=p*(1-disc);
+      const share = sumDisc>0 ? dPrice/sumDisc : 0;
+      const itemNet = dPrice - shopPts*share;           // この品の実質支払額
+      return {
+        name:c.name, source:c.source||'net', shop,
+        price:p, qty:c.qty, perSet:c.perSet, totalItems:u.totalItems, url:c.url,
+        volume:+c.volume||0, unit:c.unit||'mL', totalVol:u.totalVol,
+        net:itemNet,                                     // 実質支払額
+        netUnit: u.totalItems>0 ? itemNet/u.totalItems : null,   // 実質 1個単価
+        netVol: u.totalVol>0 ? itemNet/u.totalVol : null         // 実質 1mL単価
+      };
+    })
+  };
+  state.archive.unshift(rec);
+  // 在庫反映：fromInv があれば +totalItems、なければ品名一致を探す
+  items.forEach(c=>{
+    const u=calcUnit(c);
+    let inv = c.fromInv? state.inventory.find(x=>x.id===c.fromInv) : state.inventory.find(x=>x.name===c.name);
+    if(inv){ inv.stock=(inv.stock==null?0:inv.stock)+u.totalItems; }
+    // 候補は削除
+    state.candidates=state.candidates.filter(x=>x.id!==c.id);
+  });
+  save(); renderShop(); renderInv(); renderCmp(); renderArc();
+  toast('購入完了！在庫に反映しました');
+}
+
+/* ===================== アーカイブ ===================== */
+let arcSearch='';
+$('#arc-search').addEventListener('input',e=>{arcSearch=e.target.value.trim();renderArc();});
+$('#arc-export').addEventListener('click',exportArc);
+function renderArc(){
+  const wrap=$('#arc-list'); wrap.innerHTML='';
+  let list=state.archive.filter(r=> !arcSearch || r.shop.includes(arcSearch) || r.items.some(i=>i.name.includes(arcSearch)));
+  if(!list.length){ wrap.innerHTML='<div class="empty"><div class="big">📦</div>購入完了した記録がここに残ります</div>'; return; }
+  list.forEach(r=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><b style="color:var(--accent)">🏬 ${esc(r.shop)}</b> <span class="tiny">${r.date}</span></div>
+        <button class="icon-btn" data-del="${r.id}">🗑</button>
+      </div>
+      <div style="margin:6px 0;">
+        ${r.items.map(i=>`<div class="tiny" style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--line);"><span>${esc(i.name)} ×${i.qty}</span><span>${yen(i.price)}</span></div>`).join('')}
+      </div>
+      <div class="sum-row"><span class="muted">合計${r.discount?`（${r.discount}%OFF後）`:''}</span><span>${yen(r.total)}</span></div>
+      <div class="sum-row"><span class="muted">ポイント</span><span style="color:var(--ok)">−${yen(r.points)}</span></div>
+      <div class="sum-row total"><span>実質支払</span><span class="v">${yen(r.net)}</span></div>`;
+    card.querySelector('[data-del]').addEventListener('click',()=>{ if(confirm('この記録を削除しますか？')){state.archive=state.archive.filter(x=>x.id!==r.id);save();renderArc();} });
+    wrap.appendChild(card);
+  });
+}
+function exportArc(){
+  if(!state.archive.length)return toast('履歴がありません');
+  const rows=[['日付','ショップ','品名','金額','数量','合計(割引後)','ポイント','実質支払']];
+  state.archive.forEach(r=>r.items.forEach((i,idx)=>{
+    rows.push([r.date,r.shop,i.name,i.price,i.qty, idx===0?r.total:'', idx===0?r.points:'', idx===0?r.net:'']);
+  }));
+  const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${(''+c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='楽天購入履歴.csv'; a.click(); toast('CSVを書き出しました');
+}
+
+/* ===================== 分析（購入周期・店舗別ランキング） ===================== */
+let statSearch='';
+$('#stat-search').addEventListener('input',e=>{statSearch=e.target.value.trim();renderStat();});
+
+// 履歴を品名ごとに集約。各品の購入イベント（日付・店・実質単価）を集める。
+function buildPurchaseIndex(){
+  const idx={}; // name -> {events:[{date,shop,source,net,netUnit,netVol,unit}], }
+  state.archive.forEach(r=>{
+    (r.items||[]).forEach(i=>{
+      const k=i.name; if(!k)return;
+      (idx[k]=idx[k]||{events:[]}).events.push({
+        date:r.date, shop:i.shop||r.shop||'(店名なし)', source:i.source||'net',
+        net:i.net, netUnit:i.netUnit, netVol:i.netVol, unit:i.unit||'mL', volume:i.volume||0
+      });
+    });
+  });
+  Object.values(idx).forEach(o=>o.events.sort((a,b)=>a.date<b.date?-1:1)); // 古い順
+  return idx;
+}
+function daysBetween(d1,d2){ return Math.round((new Date(d2)-new Date(d1))/86400000); }
+function addDays(dateStr,n){ const d=new Date(dateStr); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+function renderStat(){
+  const idx=buildPurchaseIndex();
+  const names=Object.keys(idx).filter(n=>!statSearch||n.includes(statSearch));
+  const cycleWrap=$('#stat-cycle'), rankWrap=$('#stat-rank');
+
+  if(!Object.keys(idx).length){
+    cycleWrap.innerHTML='<div class="empty"><div class="big">📊</div>購入を「ショップ計算」で完了すると<br>ここに購入周期と店舗別の安さが出ます</div>';
+    rankWrap.innerHTML=''; return;
+  }
+
+  /* ---- 購入周期・次の購入目安 ---- */
+  const cycleItems = names.map(n=>{
+    const ev=idx[n].events;
+    const last=ev[ev.length-1];
+    let cycle=null;
+    if(ev.length>=2){
+      let sum=0,cnt=0;
+      for(let i=1;i<ev.length;i++){ const d=daysBetween(ev[i-1].date,ev[i].date); if(d>0){sum+=d;cnt++;} }
+      if(cnt) cycle=Math.round(sum/cnt);
+    }
+    const nextDate = cycle? addDays(last.date,cycle):null;
+    const daysLeft = nextDate? daysBetween(todayStr(),nextDate):null;
+    return {name:n, count:ev.length, last:last.date, cycle, nextDate, daysLeft};
+  }).sort((a,b)=>{
+    // 目安日が近い順（周期不明は後ろ）
+    if(a.daysLeft==null&&b.daysLeft==null) return 0;
+    if(a.daysLeft==null) return 1; if(b.daysLeft==null) return -1;
+    return a.daysLeft-b.daysLeft;
+  });
+
+  let ch='<div class="cat-h">🔄 購入周期・次の購入目安</div>';
+  ch+='<div class="card" style="padding:2px 10px;">';
+  cycleItems.forEach(it=>{
+    let badge,sub;
+    if(it.cycle==null){
+      badge='<span class="pill low">周期算出中</span>';
+      sub=`購入${it.count}回・最終 ${it.last}（あと1回でわかります）`;
+    }else{
+      const soon = it.daysLeft!=null && it.daysLeft<=7;
+      const over = it.daysLeft!=null && it.daysLeft<0;
+      badge = over? '<span class="pill need">買い時すぎ</span>'
+            : soon? '<span class="pill low">そろそろ</span>'
+            : '<span class="pill ok">まだ</span>';
+      const dl = it.daysLeft<0? `${-it.daysLeft}日経過` : `あと${it.daysLeft}日`;
+      sub=`周期 約${it.cycle}日・次の目安 ${it.nextDate}（${dl}）`;
+    }
+    ch+=`<div class="inv-item"><div class="inv-name">
+      <div class="nm">${esc(it.name)} ${badge}</div>
+      <div class="note">${sub}</div>
+    </div></div>`;
+  });
+  ch+='</div>';
+  cycleWrap.innerHTML=ch;
+
+  /* ---- 店舗別ランキング（品目ごとに最安店） ---- */
+  let rh='<div class="cat-h">🏆 品目ごとの最安店（実質単価ベース）</div>';
+  names.forEach(n=>{
+    const ev=idx[n].events;
+    // 店ごとに最安の実質単価（1個 or 1mL）を集計
+    const byShop={};
+    ev.forEach(e=>{
+      const u = e.netVol!=null? e.netVol : e.netUnit;   // 容量があればmL単価、なければ個単価
+      if(u==null||isNaN(u))return;
+      const key=e.shop;
+      const cur=byShop[key];
+      if(!cur || u<cur.unit){ byShop[key]={unit:u, isVol:e.netVol!=null, unitName:e.unit, source:e.source, date:e.date, count:1}; }
+      if(cur) cur.count=(cur.count||1)+1;
+    });
+    const shops=Object.entries(byShop).map(([shop,v])=>({shop,...v})).sort((a,b)=>a.unit-b.unit);
+    if(!shops.length) return;
+    const best=shops[0];
+    rh+=`<div class="card"><div style="font-weight:700;margin-bottom:6px;">${esc(n)}</div>`;
+    shops.forEach((s,i)=>{
+      const tag = s.source==='store'?'<span class="src-tag store">実店舗</span>':'<span class="src-tag net">ネット</span>';
+      const price = s.isVol? `${yenV(s.unit)}/${s.unitName}` : `${yen1(s.unit)}/個`;
+      const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'　';
+      rh+=`<div class="shop-line" style="padding:6px 0;border-bottom:${i===shops.length-1?'0':'1px solid var(--line)'};">
+        <div class="nm">${medal} ${esc(s.shop)} ${tag}<br><span class="tiny">最終 ${s.date}</span></div>
+        <div class="amt"><div class="a1" style="color:${i===0?'var(--ok)':'var(--txt)'}">${price}</div></div>
+      </div>`;
+    });
+    rh+=`<div class="tiny" style="margin-top:6px;color:var(--ok);">→ 最安は <b>${esc(best.shop)}</b></div></div>`;
+  });
+  rankWrap.innerHTML=rh;
+}
+
+/* ===================== Sheet / FAB ===================== */
+function openSheet(html){ $('#sheet').innerHTML=html; $('#overlay').classList.add('show'); document.body.style.overflow='hidden'; }
+function closeSheet(){ $('#overlay').classList.remove('show'); document.body.style.overflow=''; }
+$('#overlay').addEventListener('click',e=>{ if(e.target===$('#overlay')) closeSheet(); });
+// 入力欄をタップ/フォーカスしたら既存の値を全選択（上書き入力しやすく）
+document.addEventListener('focusin',e=>{
+  const t=e.target;
+  if(t.tagName==='INPUT' && (t.type==='number'||t.type==='text') && t.value!==''){
+    setTimeout(()=>{ try{ t.select(); }catch(_){} },0);
+  }
+});
+function showImage(url){ if(!url)return; $('#lightbox-img').src=url; $('#lightbox').classList.add('show'); document.body.style.overflow='hidden'; }
+function closeLightbox(){ $('#lightbox').classList.remove('show'); $('#lightbox-img').src=''; document.body.style.overflow=''; }
+$('#lightbox').addEventListener('click',e=>{ if(e.target.id==='lightbox'||e.target.classList.contains('lb-close')) closeLightbox(); });
+$('#fab').addEventListener('click',()=>{
+  const v=$('.view.active').id;
+  if(v==='view-inv') openInvEdit(null);
+  else if(v==='view-cmp') openCandEdit({id:null,name:'',source:'net',shop:'',url:'',price:'',qty:1,perSet:1,points:0,selected:false,note:''});
+});
+
+/* ===================== クラウド同期 (Firebase + Googleログイン) =====================
+   各利用者は自分のGoogleアカウントでログイン → 自分専用の保管庫だけ読み書き。
+   データは本人以外アクセス不可（Firestoreルールで強制）。配布者は下のFIREBASE_CONFIGを1回設定するだけ。 */
+
+/* ▼▼▼ 配布者の方へ：ここに自分のFirebase設定を貼り付けてください（配布前に1回だけ） ▼▼▼ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDzVPIF2EesItg9J9DqHAkjiiPHT8mlpdw",
+  authDomain: "rakuten-shopping-tool-fa768.firebaseapp.com",
+  projectId: "rakuten-shopping-tool-fa768",
+  storageBucket: "rakuten-shopping-tool-fa768.firebasestorage.app",
+  messagingSenderId: "231767143578",
+  appId: "1:231767143578:web:e41a96b8283de9464c9b23"
+};
+/* ▲▲▲ ここまで（空のままだと「画面から設定」も可能） ▲▲▲ */
+
+let fbRef=null, fbUser=null, fbReady=false, applyingRemote=false, pushTimer=null, lastPulledAt=0;
+
+function setSyncStatus(txt,mode){ const b=$('#syncBtn'); if(!b)return; b.textContent=txt; b.classList.toggle('on',mode==='on'); b.classList.toggle('err',mode==='err'); }
+function effectiveConfig(){
+  if(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey) return FIREBASE_CONFIG;
+  try{ const c=JSON.parse(localStorage.getItem('rakuten_fb_config')); if(c&&c.apiKey) return c; }catch(e){}
+  return null;
+}
+function parseFirebaseConfig(text){
+  let t=(text||'').trim();
+  const i=t.indexOf('{'), j=t.lastIndexOf('}');
+  if(i<0||j<0) throw new Error('no-object');
+  t=t.slice(i,j+1);
+  return (new Function('return ('+t+')'))();
+}
+
+function initFirebase(){
+  const cfg=effectiveConfig();
+  if(!cfg){ setSyncStatus('☁︎ 同期','off'); return false; }
+  if(typeof firebase==='undefined'){ setSyncStatus('⚠︎ 読込待ち','err'); return false; }
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    fbReady=true;
+    firebase.auth().onAuthStateChanged(onAuthChanged);
+    firebase.auth().getRedirectResult().then(r=>{ if(r&&r.user) toast('ログインしました'); }).catch(e=>toast(authErr(e))); // リダイレクト復帰
+    return true;
+  }catch(e){ setSyncStatus('⚠︎ 設定エラー','err'); toast('設定エラー: '+e.message); return false; }
+}
+
+function onAuthChanged(user){
+  fbUser=user;
+  if(user){
+    fbRef=firebase.firestore().collection('users').doc(user.uid);
+    lastPulledAt=0; setSyncStatus('☁︎ 接続中…','on'); subscribeRemote();
+  }else{
+    fbRef=null; setSyncStatus('☁︎ ログイン','off');
+  }
+}
+
+function subscribeRemote(){
+  if(!fbRef) return;
+  fbRef.onSnapshot({includeMetadataChanges:false}, snap=>{
+    if(snap.metadata.hasPendingWrites) return;          // 自分の書込みエコーは無視
+    if(!snap.exists){ pushRemote(true); setSyncStatus('☁︎ 同期ON','on'); return; } // 初回：今のデータを送信
+    const d=snap.data(); if(!d||!d.data){ setSyncStatus('☁︎ 同期ON','on'); return; }
+    if(d.updatedAt && d.updatedAt<=lastPulledAt){ setSyncStatus('☁︎ 同期ON','on'); return; }
+    try{
+      const parsed=JSON.parse(d.data);
+      applyingRemote=true;
+      const prevSettings=state.settings;
+      state=parsed;
+      state.settings=Object.assign({}, DEFAULT_SETTINGS, prevSettings, parsed.settings||{});
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      lastPulledAt=d.updatedAt||Date.now();
+      applySettings(); renderAll(); applyingRemote=false;
+      setSyncStatus('☁︎ 同期ON','on'); toast('最新データに同期しました');
+    }catch(e){ applyingRemote=false; }
+  }, err=>{ setSyncStatus('⚠︎ 同期エラー','err'); toast('同期エラー: '+(err.code||err.message)); });
+}
+
+function pushRemote(immediate){
+  if(!fbRef||applyingRemote) return;
+  clearTimeout(pushTimer);
+  const doIt=()=>{ const ts=Date.now(); lastPulledAt=ts;
+    fbRef.set({data:JSON.stringify(state), updatedAt:ts}).catch(e=>{ setSyncStatus('⚠︎ 保存失敗','err'); toast('保存失敗: '+(e.code||e.message)); });
+  };
+  if(immediate) doIt(); else pushTimer=setTimeout(doIt,700);
+}
+
+function signIn(){
+  if(!fbReady && !initFirebase()) return toast('同期はまだ設定されていません');
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  // ポップアップ方式を最優先（リダイレクト方式はCookie制限で失敗しやすいため）
+  firebase.auth().signInWithPopup(provider)
+    .then(()=>{ closeSheet(); toast('ログインしました'); })
+    .catch(e=>{
+      if(e.code==='auth/popup-closed-by-user'){ toast('ログインがキャンセルされました'); return; }
+      if(['auth/popup-blocked','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(e.code)){
+        firebase.auth().signInWithRedirect(provider); return;
+      }
+      toast(authErr(e));
+    });
+}
+function signOutFb(){ if(typeof firebase!=='undefined'&&firebase.auth) firebase.auth().signOut(); closeSheet(); toast('ログアウトしました'); }
+
+function authErr(e){
+  const m={
+    'auth/invalid-email':'メールアドレスの形式が正しくありません',
+    'auth/missing-password':'パスワードを入力してください',
+    'auth/weak-password':'パスワードは6文字以上にしてください',
+    'auth/email-already-in-use':'このメールは登録済みです。「ログイン」をお試しください',
+    'auth/user-not-found':'メールまたはパスワードが違います',
+    'auth/wrong-password':'メールまたはパスワードが違います',
+    'auth/invalid-credential':'メールまたはパスワードが違います',
+    'auth/too-many-requests':'試行回数が多すぎます。少し時間をおいてください',
+    'auth/operation-not-allowed':'この方法は管理者側で未有効です（Firebaseで有効化が必要）',
+    'auth/network-request-failed':'通信エラー。接続を確認してください'
+  };
+  return m[e&&e.code] || ('エラー: '+((e&&e.code)||(e&&e.message)||e));
+}
+function emailAuth(mode){
+  if(!fbReady && !initFirebase()) return toast('同期はまだ設定されていません');
+  const email=($('#sy-email').value||'').trim(), pw=$('#sy-pw').value||'';
+  if(!email) return toast('メールアドレスを入力してください');
+  if(!pw) return toast('パスワードを入力してください');
+  const auth=firebase.auth();
+  const p = mode==='signup'
+    ? auth.createUserWithEmailAndPassword(email,pw)
+    : auth.signInWithEmailAndPassword(email,pw);
+  p.then(()=>{ closeSheet(); toast(mode==='signup'?'登録しました':'ログインしました'); })
+   .catch(e=>toast(authErr(e)));
+}
+function passwordReset(){
+  if(!fbReady && !initFirebase()) return toast('同期はまだ設定されていません');
+  const email=($('#sy-email').value||'').trim();
+  if(!email) return toast('先にメールアドレスを入力してください');
+  firebase.auth().sendPasswordResetEmail(email)
+    .then(()=>toast('パスワード再設定メールを送信しました'))
+    .catch(e=>toast(authErr(e)));
+}
+
+function ownerHelp(){
+  return `
+    <details class="help" style="margin-top:14px;">
+      <summary>🛠 配布者向け：Firebaseの初期設定（1回だけ・約15分）</summary>
+      <div class="body">
+        <ol class="steps">
+          <li><code>console.firebase.google.com</code> でプロジェクト作成（例 rakuten-stock／アナリティクスはオフでOK）。</li>
+          <li>「構築 → Firestore Database」→「データベースの作成」→ <b>本番モード</b>→ ロケーション <code>asia-northeast1（東京）</code>。</li>
+          <li>「構築 → Authentication」→「始める」→ ログイン方法で <b>Google</b> を有効化。</li>
+          <li>Authentication →「Settings → 承認済みドメイン」に、配布するURLのドメイン（例 <code>○○.netlify.app</code>）を追加。</li>
+          <li>歯車 →「プロジェクトの設定 → マイアプリ → &lt;/&gt;（ウェブ）」でアプリ登録 → <code>firebaseConfig</code> をコピー。</li>
+          <li>HTMLの <code>FIREBASE_CONFIG</code> に貼る（または下の欄に貼って「保存して有効化」でこの端末だけ即テスト）。</li>
+        </ol>
+        <div style="margin-top:10px;" class="tiny">▼ Firestoreの「ルール」を必ず下記に。これで<b>本人以外アクセス不可</b>になります。</div>
+        <pre class="code">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+  }
+}</pre>
+        <div class="field" style="margin-top:10px;"><label>Firebase設定を貼り付け（配布者用・任意）</label>
+          <textarea id="sy-config" rows="6" placeholder="const firebaseConfig = { apiKey: ... };"></textarea></div>
+        <div class="sheet-actions"><button class="btn sec" id="sy-savecfg">この端末で保存して有効化</button></div>
+      </div>
+    </details>`;
+}
+
+function openSyncSheet(){
+  const cfg=effectiveConfig();
+  const loggedIn=!!fbUser;
+  let body;
+  if(!cfg){
+    body = `<div class="calc-preview" style="font-weight:600;">⚙️ このアプリにはまだ同期用のFirebaseが設定されていません。<br><span class="tiny">利用者の方：配布者にお問い合わせください。配布者の方：下の手順で設定を。</span></div>`;
+  }else if(loggedIn){
+    body = `
+      <div class="calc-preview" style="color:var(--ok);font-weight:700;">✅ 同期中：${esc(fbUser.email||fbUser.displayName||'ログイン済み')}</div>
+      <div class="tiny" style="margin:8px 0 12px;">同じGoogleアカウントでログインした端末同士が自動で同期します。<br>データは<b>あなた専用</b>で、配布者を含め他の人には見えません。</div>
+      <div class="sheet-actions"><button class="btn sec" id="sy-out">ログアウト</button></div>`;
+  }else{
+    body = `
+      <div class="tiny" style="margin-bottom:14px;">ログインすると、あなたの<b>スマホとPCのデータが自動で同期</b>します。<br>データはあなた専用で、他の人には見えません。</div>
+      <div class="sheet-actions"><button class="btn" id="sy-in" style="background:#fff;color:#3c4043;border:1px solid #dadce0;font-weight:600;">🔑 Googleでログイン</button></div>
+      <div style="text-align:center;color:var(--sub);font-size:11px;margin:14px 0 10px;position:relative;">— または メールアドレスで —</div>
+      <div class="seg" id="sy-mode" style="margin-bottom:10px;"><button data-m="login" class="on">ログイン</button><button data-m="signup">新規登録</button></div>
+      <div class="field" style="margin-bottom:8px;"><input type="email" id="sy-email" placeholder="メールアドレス" autocomplete="email"></div>
+      <div class="field" style="margin-bottom:8px;"><input type="password" id="sy-pw" placeholder="パスワード（6文字以上）" autocomplete="current-password"></div>
+      <div class="sheet-actions"><button class="btn" id="sy-email-go">ログイン</button></div>
+      <div style="text-align:center;margin-top:10px;"><a href="#" id="sy-reset" class="urllink">パスワードを忘れた方</a></div>`;
+  }
+  openSheet(`<h3>☁︎ データ同期</h3>${body}${ownerHelp()}`);
+  const i=$('#sy-in'); if(i) i.onclick=signIn;
+  const o=$('#sy-out'); if(o) o.onclick=signOutFb;
+  let emailMode='login';
+  const modeSeg=$('#sy-mode');
+  if(modeSeg) modeSeg.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    [...modeSeg.children].forEach(x=>x.classList.remove('on')); b.classList.add('on');
+    emailMode=b.dataset.m;
+    $('#sy-email-go').textContent = emailMode==='signup'?'この内容で新規登録':'ログイン';
+    $('#sy-pw').setAttribute('autocomplete', emailMode==='signup'?'new-password':'current-password');
+  });
+  const eg=$('#sy-email-go'); if(eg) eg.onclick=()=>emailAuth(emailMode);
+  const rs=$('#sy-reset'); if(rs) rs.onclick=ev=>{ev.preventDefault();passwordReset();};
+  const sv=$('#sy-savecfg'); if(sv) sv.onclick=()=>{
+    let conf; try{ conf=parseFirebaseConfig($('#sy-config').value); }catch(e){ return toast('設定の形式が正しくありません'); }
+    if(!conf.apiKey){ return toast('apiKeyが見当たりません'); }
+    localStorage.setItem('rakuten_fb_config', JSON.stringify(conf));
+    closeSheet(); toast('設定を保存しました'); fbReady=false; initFirebase();
+  };
+}
+$('#syncBtn').addEventListener('click', openSyncSheet);
+
+/* ===================== 設定・リリース情報 ===================== */
+function applySettings(){
+  const s = state.settings || (state.settings=Object.assign({},DEFAULT_SETTINGS));
+  const root = document.documentElement;
+  root.setAttribute('data-theme', s.theme==='dark'?'dark':'light');
+  root.setAttribute('data-fs', ['s','m','l'].includes(s.fontSize)?s.fontSize:'m');
+  const a = ACCENTS[s.accent] || ACCENTS.red;
+  root.style.setProperty('--rakuten', a.main);
+  root.style.setProperty('--rakuten-d', a.dark);
+  const tm=document.querySelector('meta[name="theme-color"]'); if(tm) tm.setAttribute('content', s.theme==='dark'?'#15171c':a.main);
+  // 未読のリリースがあれば⚙️に黄色ドット
+  const hasNew = CHANGELOG.length && CHANGELOG[0].v !== s.seenVersion;
+  const dot=$('#setDot'); if(dot) dot.style.display = hasNew?'block':'none';
+}
+function setSetting(key,val){ state.settings[key]=val; save(); applySettings(); }
+
+let changelogExpanded=false;
+function changelogItemHtml(c,i){
+  const seen=state.settings.seenVersion;
+  return `<div class="feed-item${(c.v!==seen && i===0)?' is-new':''}">
+      <span class="ver">v${c.v}</span><span class="date">${c.date}</span>
+      <ul>${c.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>
+    </div>`;
+}
+function changelogHtml(){
+  const LIMIT=5;
+  const shown = changelogExpanded? CHANGELOG : CHANGELOG.slice(0,LIMIT);
+  let h='<div id="changelog-list">'+shown.map((c,i)=>changelogItemHtml(c,i)).join('')+'</div>';
+  if(CHANGELOG.length>LIMIT){
+    h += changelogExpanded
+      ? '<button class="btn sec sm" id="changelog-toggle" style="width:100%;justify-content:center;margin-top:4px;">閉じる</button>'
+      : `<button class="btn sec sm" id="changelog-toggle" style="width:100%;justify-content:center;margin-top:4px;">さらに見る（残り${CHANGELOG.length-LIMIT}件）</button>`;
+  }
+  return h;
+}
+
+function openSettingsSheet(){
+  changelogExpanded=false;
+  const s = state.settings;
+  const optRow = (key,opts)=>'<div class="opt-row">'+opts.map(o=>
+    `<button class="opt${s[key]===o.v?' on':''}" data-k="${key}" data-val="${o.v}">${o.label}</button>`
+  ).join('')+'</div>';
+  const swatches = '<div class="swatch-row">'+Object.entries(ACCENTS).map(([k,a])=>
+    `<div class="swatch${s.accent===k?' on':''}" data-accent="${k}" title="${a.name}" style="background:${a.main};"></div>`
+  ).join('')+'</div>';
+
+  openSheet(`<h3>⚙️ 設定</h3>
+    <div class="set-group">
+      <div class="lbl">🎨 テーマカラー</div>${swatches}
+    </div>
+    <div class="set-group">
+      <div class="lbl">🌗 表示モード</div>
+      ${optRow('theme',[{v:'light',label:'ライト'},{v:'dark',label:'ダーク'}])}
+    </div>
+    <div class="set-group">
+      <div class="lbl">🔠 文字サイズ</div>
+      ${optRow('fontSize',[{v:'s',label:'小'},{v:'m',label:'標準'},{v:'l',label:'大'}])}
+    </div>
+    <div class="set-group">
+      <div class="lbl">🚀 起動時に開くタブ</div>
+      ${optRow('startTab',[{v:'inv',label:'📝在庫'},{v:'cmp',label:'⭐比較'},{v:'shop',label:'🛒ショップ'},{v:'stat',label:'📊分析'}])}
+    </div>
+    <div class="set-group">
+      <div class="lbl">📦 在庫の購入判定ルール（全品共通）</div>
+      <div class="two">
+        <div class="field"><label>残り何個以下で「要・補充」警告？</label><input type="number" id="g-warn" value="${s.warnAt??1}" min="0"></div>
+        <div class="field"><label>在庫なし以外の既定しきい値</label><input type="number" id="g-th" value="${s.defaultThreshold??1}" min="0">
+          <div class="hint">理想在庫を入れない品はこの数以下で「そろそろ」</div></div>
+      </div>
+      <div class="field"><label>理想在庫の「何分の1」で補充対象？</label><input type="number" id="g-div" value="${s.restockDivisor??3}" min="1">
+        <div class="hint">例）3なら理想の1/3以下で補充対象。個別に理想在庫を設定した品（★個別）は、その値を優先します</div></div>
+    </div>
+    <div class="set-group">
+      <div class="lbl">🔍 検索でよく使う店（編集可）</div>
+      <div id="g-shop-list"></div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <input type="text" id="g-shop-new" placeholder="店名を追加（例）爽快ドラッグ" style="flex:1;">
+        <button class="btn sec sm" id="g-shop-add">追加</button>
+      </div>
+      <div class="hint">在庫リストの「🔍楽天で検索」で、ここの店から選んで検索できます</div>
+    </div>
+    <div class="set-group">
+      <div class="lbl">📣 アップデート情報（リリースノート）</div>
+      <div id="changelog-wrap">${changelogHtml()}</div>
+    </div>
+    <div class="tiny" style="text-align:center;margin-top:4px;">バージョン v${APP_VERSION}</div>
+  `);
+
+  // 開いた時点で既読にする（ドットを消す）
+  if(CHANGELOG.length && state.settings.seenVersion!==CHANGELOG[0].v){
+    state.settings.seenVersion = CHANGELOG[0].v; save(); applySettings();
+  }
+  // オプション選択
+  $('#sheet').querySelectorAll('.opt').forEach(btn=>btn.onclick=()=>{
+    setSetting(btn.dataset.k, btn.dataset.val);
+    btn.parentElement.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+    btn.classList.add('on');
+  });
+  // テーマカラー
+  $('#sheet').querySelectorAll('.swatch').forEach(sw=>sw.onclick=()=>{
+    setSetting('accent', sw.dataset.accent);
+    $('#sheet').querySelectorAll('.swatch').forEach(x=>x.classList.remove('on'));
+    sw.classList.add('on');
+  });
+  // 在庫判定ルール（入力で即保存・在庫リスト再描画）
+  const bindNum=(id,key,min)=>{ const el=$('#'+id); if(!el)return; el.addEventListener('input',()=>{ let v=+el.value; if(isNaN(v))return; if(min!=null&&v<min)v=min; state.settings[key]=v; save(); renderInv(); }); };
+  bindNum('g-warn','warnAt',0); bindNum('g-th','defaultThreshold',0); bindNum('g-div','restockDivisor',1);
+  // 検索でよく使う店の編集
+  const renderShopSettings=()=>{
+    const wrap=$('#g-shop-list'); if(!wrap)return;
+    const shops=state.settings.searchShops||[];
+    wrap.innerHTML = shops.length? shops.map((sh,i)=>
+      `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+        <input type="text" class="g-shop-edit" data-i="${i}" value="${esc(sh)}" style="flex:1;">
+        <button class="icon-btn g-shop-del" data-i="${i}" title="削除">🗑</button>
+      </div>`).join('') : '<div class="tiny">まだ登録がありません。下から追加してください。</div>';
+    wrap.querySelectorAll('.g-shop-edit').forEach(inp=>inp.addEventListener('input',()=>{ state.settings.searchShops[+inp.dataset.i]=inp.value.trim(); save(); }));
+    wrap.querySelectorAll('.g-shop-del').forEach(b=>b.onclick=()=>{ state.settings.searchShops.splice(+b.dataset.i,1); save(); renderShopSettings(); });
+  };
+  renderShopSettings();
+  const addShop=()=>{ const v=$('#g-shop-new').value.trim(); if(!v)return; state.settings.searchShops=state.settings.searchShops||[]; state.settings.searchShops.push(v); $('#g-shop-new').value=''; save(); renderShopSettings(); };
+  $('#g-shop-add').onclick=addShop;
+  $('#g-shop-new').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();addShop();} });
+  // リリースノート「さらに見る／閉じる」
+  const bindChangelogToggle=()=>{ const t=$('#changelog-toggle'); if(t) t.onclick=()=>{ changelogExpanded=!changelogExpanded; $('#changelog-wrap').innerHTML=changelogHtml(); bindChangelogToggle(); }; };
+  bindChangelogToggle();
+}
+$('#setBtn').addEventListener('click', openSettingsSheet);
+
+/* ===================== init ===================== */
+function renderAll(){ renderInv(); renderCmp(); renderShop(); renderArc(); renderStat(); }
+applySettings();
+renderAll();
+if(state.settings.startTab && state.settings.startTab!=='inv') switchTab(state.settings.startTab);
+initFirebase();
+</script>
+</body>
+</html>
